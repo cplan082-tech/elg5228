@@ -7,7 +7,7 @@ import numpy as np
 
 class robot_driver():
     
-    eps = 1e-3
+    eps = 1e-2
     
     def __init__(self, rot_spd, drv_spd):
         
@@ -16,14 +16,14 @@ class robot_driver():
         
         self.dest = Pose()
         self.pose = Pose()
-        # self.vel = Twist()
-        self.vel = Pose() # TODO: remove when done testing
+        self.vel = Twist()
+        # self.vel = Pose() # TODO: remove when done testing
         self.angle = None # TODO: might not need
 
         rospy.init_node('robot_driver', anonymous=False)
 
-        self.pub = rospy.Publisher('/turtle1/test', Pose, queue_size=10) # TODO: delete this after test
-        # self.pub = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=10) # TODO: uncomment this after test
+        # self.pub = rospy.Publisher('/turtle1/test', Pose, queue_size=10) # TODO: delete this after test
+        self.pub = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=10) # TODO: uncomment this after test
         self.sub_dest = rospy.Subscriber('/turtle1/destination', Pose, self.dest_coord)
         self.sub_pose = rospy.Subscriber('/turtle1/pose', Pose, self.pose_coord)
         
@@ -49,8 +49,18 @@ class robot_driver():
         
     def publish_test(self):
         self.direction_finder()
-        self.vel.angular_velocity = self.direction
-        self.vel.theta = self.angle_t_d
+        # self.vel.angular_velocity = self.direction
+        # self.vel.theta = self.angle_t_d
+        if abs(self.angle_t_d) > robot_driver.eps:
+            # self.vel.linear.x = 0
+            # self.vel.linear.y = 0
+            # self.vel.linear.z = 0
+            self.vel.angular.z = self.direction
+            
+        else:
+            # self.vel.linear = 0
+            self.vel.angular.z = 0
+            
         self.pub.publish(self.vel)
 
         """
@@ -102,7 +112,7 @@ class robot_driver():
     #     self.y_remaining = self.pose.y - self.dest.y
         
 if __name__ == '__main__':
-    rot_spd = 0.1
+    rot_spd = 2
     drv_spd = 0.2
     
     obj = robot_driver(rot_spd, drv_spd)
