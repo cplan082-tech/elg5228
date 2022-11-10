@@ -46,3 +46,4 @@ if __name__ == '__main__':
         trg_pub_run()
     except rospy.ROSInterruptException:
         pass
+
