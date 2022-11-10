@@ -18,13 +18,10 @@ class robot_driver():
         self.dest = Pose()
         self.pose = Pose()
         self.vel = Twist()
-        # self.vel = Pose() # TODO: remove when done testing
-        self.angle = None # TODO: might not need
 
         rospy.init_node('robot_driver', anonymous=False)
 
-        # self.pub = rospy.Publisher('/turtle1/test', Pose, queue_size=10) # TODO: delete this after test
-        self.pub = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=10) # TODO: uncomment this after test
+        self.pub = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=10)
         self.sub_dest = rospy.Subscriber('/turtle1/destination', Pose, self.dest_coord)
         self.sub_pose = rospy.Subscriber('/turtle1/pose', Pose, self.pose_coord)
         
@@ -45,13 +42,12 @@ class robot_driver():
     
     def pose_coord(self, received_msg):
         self.pose = received_msg
-        self.publish_test() # TODO: Remove after test
+        self.publish_coord()
         
         
-    def publish_test(self):
+    def publish_coord(self):
         self.direction_finder()
-        # self.vel.angular_velocity = self.direction # TODO: remove after testing
-        # self.vel.theta = self.angle_t_d # TODO: remove after testing
+
         if abs(self.angle_t_d) > robot_driver.eps:
             self.vel.linear.x = 0
             self.vel.angular.z = self.direction
@@ -70,24 +66,17 @@ class robot_driver():
                 
         
     def direction_finder(self):
-        self.rot_t_d_angle()
-        self.direction = self.rot_spd*np.sign(self.angle_t_d) # if angle is -tiv, must turn CCW (+tiv rot)
-        # self.rot_drvr() # TODO: uncomment
+        # self.HT_t_d_calc()
+        R_0_t = self.z_elemental(self.pose.theta)
+        q_0 = np.array([self.pose.x, self.pose.y, 0]).reshape(-1,1)
         
-
-    def rot_t_d_angle(self):
-        self.HT_t_d_calc()
+        self.HT_0_t = self.HT_builder(R_0_t, q_0)
+        self.HT_t_d = np.dot(np.linalg.inv(self.HT_0_t), self.HT_0_d)
+        
         self.angle_t_d = np.arctan2(self.HT_t_d[1,3], self.HT_t_d[0,3])
+        self.direction = self.rot_spd*np.sign(self.angle_t_d) # if angle is -tiv, must turn CCW (+tiv rot)
+        
 
-        
-    # def rot_drvr(self):
-    #     while(abs(self.angle_t_d) > robot_driver.eps):
-    #         self.turtle_drvr()
-    #         self.rot_t_d_angle()
-    
-    # def turtle_drvr(self):
-    #     pass
-        
     def z_elemental(self, gamma):            
         R_z = np.array([[np.cos(gamma), -np.sin(gamma), 0],
                         [np.sin(gamma), np.cos(gamma), 0],
@@ -98,23 +87,17 @@ class robot_driver():
     
     def HT_builder(self, R, p):
         arr_zeros = np.array([[0, 0, 0, 1]])
-        
         return np.vstack((np.hstack((R, p)), arr_zeros))
     
     
-    def HT_t_d_calc(self):        
-        # R_0_t stands for turtle (t) orientation wrt world frame(0)
-        R_0_t = self.z_elemental(self.pose.theta)
-        q_0 = np.array([self.pose.x, self.pose.y, 0]).reshape(-1,1)
-        self.HT_0_t = self.HT_builder(R_0_t, q_0)
-        self.HT_t_d = np.dot(np.linalg.inv(self.HT_0_t), self.HT_0_d)
+    # def HT_t_d_calc(self):        
+    #     # R_0_t stands for turtle (t) orientation wrt world frame(0)
+    #     R_0_t = self.z_elemental(self.pose.theta)
+    #     q_0 = np.array([self.pose.x, self.pose.y, 0]).reshape(-1,1)
+    #     self.HT_0_t = self.HT_builder(R_0_t, q_0)
+    #     self.HT_t_d = np.dot(np.linalg.inv(self.HT_0_t), self.HT_0_d)
         
-        # self.R_t_d = np.dot(self.R_0_t.T, self.R_0_d)
-        
-    
-    # def remaining_dist(self):
-    #     self.x_remaining = self.pose.x - self.dest.x
-    #     self.y_remaining = self.pose.y - self.dest.y
+
         
 if __name__ == '__main__':
     rot_spd = 1
