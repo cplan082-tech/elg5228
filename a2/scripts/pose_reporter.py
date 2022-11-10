@@ -2,8 +2,10 @@
 
 import rospy
 from turtlesim.msg import Pose
+import numpy as np
 
 def callback(received_message):
+    print(received_message.theta)
     return rospy.loginfo('Pose = %s', received_message)
 
 def listener():

@@ -4,7 +4,6 @@ import rospy
 from turtlesim.msg import Pose
 
 
-
 def get_coords(axis):
     while(True):
         input_val = int(input("\n{}: ".format(axis)))
