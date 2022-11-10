@@ -8,6 +8,7 @@ import numpy as np
 class robot_driver():
     
     eps = 1e-2
+    dist_arrived = 10e-2
     
     def __init__(self, rot_spd, drv_spd):
         
@@ -49,42 +50,35 @@ class robot_driver():
         
     def publish_test(self):
         self.direction_finder()
-        # self.vel.angular_velocity = self.direction
-        # self.vel.theta = self.angle_t_d
+        # self.vel.angular_velocity = self.direction # TODO: remove after testing
+        # self.vel.theta = self.angle_t_d # TODO: remove after testing
         if abs(self.angle_t_d) > robot_driver.eps:
-            # self.vel.linear.x = 0
-            # self.vel.linear.y = 0
-            # self.vel.linear.z = 0
+            self.vel.linear.x = 0
             self.vel.angular.z = self.direction
             
         else:
-            # self.vel.linear = 0
             self.vel.angular.z = 0
+            dist2go = np.sqrt(self.HT_t_d[0,3]**2 + self.HT_t_d[1,3]**2)
+            
+            if dist2go > robot_driver.dist_arrived:
+                self.vel.linear.x = self.drv_spd
+            
+            else:
+                self.vel.linear.x = 0
             
         self.pub.publish(self.vel)
-
-        """
-        use homogeneous matrices
-        """
-        
-    def HT_t_d_calc(self):        
-        # R_0_t stands for turtle (t) orientation wrt world frame(0)
-        R_0_t = self.z_elemental(self.pose.theta)
-        q_0 = np.array([self.pose.x, self.pose.y, 0]).reshape(-1,1)
-        self.HT_0_t = self.HT_builder(R_0_t, q_0)
-        self.HT_t_d = np.dot(np.linalg.inv(self.HT_0_t), self.HT_0_d)
-        
-        # self.R_t_d = np.dot(self.R_0_t.T, self.R_0_d)
-        
-    def rot_t_d_angle(self):
-        self.HT_t_d_calc()
-        self.angle_t_d = np.arctan2(self.HT_t_d[1,3], self.HT_t_d[0,3])
-        
+                
         
     def direction_finder(self):
         self.rot_t_d_angle()
         self.direction = self.rot_spd*np.sign(self.angle_t_d) # if angle is -tiv, must turn CCW (+tiv rot)
         # self.rot_drvr() # TODO: uncomment
+        
+
+    def rot_t_d_angle(self):
+        self.HT_t_d_calc()
+        self.angle_t_d = np.arctan2(self.HT_t_d[1,3], self.HT_t_d[0,3])
+
         
     # def rot_drvr(self):
     #     while(abs(self.angle_t_d) > robot_driver.eps):
@@ -107,13 +101,24 @@ class robot_driver():
         
         return np.vstack((np.hstack((R, p)), arr_zeros))
     
+    
+    def HT_t_d_calc(self):        
+        # R_0_t stands for turtle (t) orientation wrt world frame(0)
+        R_0_t = self.z_elemental(self.pose.theta)
+        q_0 = np.array([self.pose.x, self.pose.y, 0]).reshape(-1,1)
+        self.HT_0_t = self.HT_builder(R_0_t, q_0)
+        self.HT_t_d = np.dot(np.linalg.inv(self.HT_0_t), self.HT_0_d)
+        
+        # self.R_t_d = np.dot(self.R_0_t.T, self.R_0_d)
+        
+    
     # def remaining_dist(self):
     #     self.x_remaining = self.pose.x - self.dest.x
     #     self.y_remaining = self.pose.y - self.dest.y
         
 if __name__ == '__main__':
-    rot_spd = 2
-    drv_spd = 0.2
+    rot_spd = 1
+    drv_spd = 1
     
     obj = robot_driver(rot_spd, drv_spd)
     rospy.spin()
