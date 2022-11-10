@@ -6,7 +6,7 @@ from turtlesim.msg import Pose
 
 def get_coords(axis):
     while(True):
-        input_val = int(input("\n{}: ".format(axis)))
+        input_val = float(input("\n{}: ".format(axis)))
         
         if(input_val < 0) or (input_val > 11):
             print("\n{} must be between 0 and 11 inclusivley".format(axis))
