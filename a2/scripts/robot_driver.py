@@ -7,7 +7,7 @@ import numpy as np
 
 class robot_driver():
     
-    eps = 8e-2
+    eps = 2
     dist_arrived = 10e-2
     
     def __init__(self, rot_spd, drv_spd):
@@ -18,44 +18,52 @@ class robot_driver():
         self.rot_spd = rot_spd
         self.drv_spd = drv_spd
         
-        self.dest = Pose()
-        self.pose = Pose()
+        # self.dest = Pose()
+        # self.pose = Pose()
+        self.drv_cmd = Pose()
         self.vel = Twist()
         
         # self.pub = rospy.Publisher('/turtle1/test', Twist, queue_size=10)
         self.pub = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=10)
-        self.sub_dest = rospy.Subscriber('/turtle1/destination', Pose, self.dest_coord)
-        self.sub_pose = rospy.Subscriber('/turtle1/pose', Pose, self.pose_coord)
+        self.sub = rospy.Subscriber('/turtle1/drv_cmd', Pose, self.callback_drv_cmd)
+        # self.sub_dest = rospy.Subscriber('/turtle1/destination', Pose, self.dest_coord)
+        # self.sub_pose = rospy.Subscriber('/turtle1/pose', Pose, self.pose_coord)
         
-        # TODO: initialise this better
-        self.HT_0_d = self.HT_builder(self.z_elemental(0), np.array([5.5, 5.5, 0]).reshape(-1,1))
-        
-    
-    def dest_coord(self, received_msg):
-        self.dest = received_msg
-        
-        # R_0_d stands for destination(d) orientation wrt world frame(0)
-        R_0_d = self.z_elemental(np.arctan2(self.dest.y, self.dest.x))
-        
-        # position of dest wrt to world frame
-        p_0 = np.array([self.dest.x, self.dest.y, 0]).reshape(-1,1)
-        self.HT_0_d = self.HT_builder(R_0_d, p_0)
+        # self.HT_0_d = self.HT_builder(self.z_elemental(0), np.array([5.5, 5.5, 0]).reshape(-1,1))
         
     
-    def pose_coord(self, received_msg):
-        self.pose = received_msg
-        # self.publish_coord()
+    def callback_drv_cmd(self, rec_msg):
+        self.drv_cmd = rec_msg
+    
+    
+    # def dest_coord(self, received_msg):
+    #     self.dest = received_msg
+        
+    #     # # R_0_d stands for destination(d) orientation wrt world frame(0)
+    #     # R_0_d = self.z_elemental(np.arctan2(self.dest.y, self.dest.x))
+        
+    #     # # position of dest wrt to world frame
+    #     # p_0 = np.array([self.dest.x, self.dest.y, 0]).reshape(-1,1)
+    #     # self.HT_0_d = self.HT_builder(R_0_d, p_0)
+        
+    
+    # def pose_coord(self, received_msg):
+    #     self.pose = received_msg
+    #     # self.publish_drv_cmd()
+    
         
         
-    def publish_coord(self):
-        self.direction_finder()
-        dist2go = np.sqrt(self.HT_t_d[0,3]**2 + self.HT_t_d[1,3]**2)
+    def publish_drv_cmd(self):
+        dist2go = self.drv_cmd.linear_velocity
+        angle_t_d = self.drv_cmd.angular_velocity
+        direction = self.rot_spd*np.sign(angle_t_d) # if angle is -tiv, must turn CCW (+tiv rot)
+        # dist2go = np.sqrt(self.HT_t_d[0,3]**2 + self.HT_t_d[1,3]**2)
         
         if dist2go > robot_driver.dist_arrived:
             
-            if abs(self.angle_t_d) > robot_driver.eps:
+            if abs(angle_t_d) > robot_driver.eps:
                 self.vel.linear.x = 0
-                self.vel.angular.z = self.direction
+                self.vel.angular.z = direction
                 
             else:
                 self.vel.angular.z = 0
@@ -69,29 +77,29 @@ class robot_driver():
         # self.rate.sleep()
                 
         
-    def direction_finder(self):
-        # self.HT_t_d_calc()
-        R_t_0 = self.z_elemental(self.pose.theta).T
-        q_0 = np.array([self.pose.x, self.pose.y, 0]).reshape(-1,1)
+    # def direction_finder(self):
+    #     # self.HT_t_d_calc()
+    #     # R_t_0 = self.z_elemental(self.pose.theta).T
+    #     # q_0 = np.array([self.pose.x, self.pose.y, 0]).reshape(-1,1)
         
-        HT_0_t = self.HT_builder(R_t_0, -np.dot(R_t_0, q_0))
-        self.HT_t_d = np.dot(HT_0_t, self.HT_0_d)
+    #     # HT_0_t = self.HT_builder(R_t_0, -np.dot(R_t_0, q_0))
+    #     # self.HT_t_d = np.dot(HT_0_t, self.HT_0_d)
         
-        self.angle_t_d = np.arctan2(self.HT_t_d[1,3], self.HT_t_d[0,3])
-        self.direction = self.rot_spd*np.sign(self.angle_t_d) # if angle is -tiv, must turn CCW (+tiv rot)
+    #     # self.angle_t_d = np.arctan2(self.HT_t_d[1,3], self.HT_t_d[0,3])
+    #     self.direction = self.rot_spd*np.sign(self.angle_t_d) # if angle is -tiv, must turn CCW (+tiv rot)
         
 
-    def z_elemental(self, gamma):            
-        R_z = np.array([[np.cos(gamma), -np.sin(gamma), 0],
-                        [np.sin(gamma), np.cos(gamma), 0],
-                        [0, 0, 1]])
+    # def z_elemental(self, gamma):            
+    #     R_z = np.array([[np.cos(gamma), -np.sin(gamma), 0],
+    #                     [np.sin(gamma), np.cos(gamma), 0],
+    #                     [0, 0, 1]])
         
-        return R_z
+    #     return R_z
     
     
-    def HT_builder(self, R, p):
-        arr_zeros = np.array([[0, 0, 0, 1]])
-        return np.vstack((np.hstack((R, p)), arr_zeros))
+    # def HT_builder(self, R, p):
+    #     arr_zeros = np.array([[0, 0, 0, 1]])
+    #     return np.vstack((np.hstack((R, p)), arr_zeros))
         
     
     
@@ -105,13 +113,13 @@ class robot_driver():
 
         
 if __name__ == '__main__':
-    rot_spd = 1
+    rot_spd = 0.2
     drv_spd = 1
     
     obj = robot_driver(rot_spd, drv_spd)
     while not rospy.is_shutdown():
         try:
-            obj.publish_coord()
+            obj.publish_drv_cmd()
             
         except rospy.ROSInterruptException:
             pass
