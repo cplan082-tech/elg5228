@@ -16,6 +16,8 @@ class pose_reporter():
                                          self.callback_pose)
         self.sub_dest = rospy.Subscriber('/turtle1/destination', Pose, 
                                          self.callback_dest)
+        self.pub_drv_cmd = rospy.Publisher("turtle1/drv_cmd", Pose,
+                                           queue_size=10)
         
         self.pose = Pose()
         self.dest = Pose()
@@ -48,22 +50,32 @@ class pose_reporter():
         self.HT_t_d = np.dot(HT_0_t, self.HT_0_d)
         
         # log info
-        
-        lst_robo_position_curr = [self.pose.x, self.pose.y]
         dist2go = np.sqrt(self.HT_t_d[0,3]**2 + self.HT_t_d[1,3]**2)
-        robo_orien_curr = np.rad2deg(self.pose.theta)
         orient_err = np.rad2deg(np.arctan2(self.HT_t_d[1,3], self.HT_t_d[0,3]))
         
-        # rospy.loginfo('', )
+        pose_pub = Pose()
+        pose_pub.x = self.pose.x
+        pose_pub.y = self.pose.y
+        pose_pub.theta = np.rad2deg(self.pose.theta)
+        
+        pose_pub.linear_velocity = dist2go
+        pose_pub.angular_velocity = orient_err
+        
         rospy.loginfo('\n\n====================Info====================')
-        rospy.loginfo('Robot Position:\n\t\t\t\tx= %s m \n\t\t\t\ty= %s m', 
-                      lst_robo_position_curr[0],
-                      lst_robo_position_curr[1])
-        rospy.loginfo('Distance between robot and destination:\n\t\t\t\t %s m', 
-                      dist2go)
-        rospy.loginfo("Robot's current orientation:\n\t\t\t\t %s Deg", 
-                      robo_orien_curr)
-        rospy.loginfo('Orientation error:\n\t\t\t\t %s m', orient_err)
+        rospy.loginfo(pose_pub)
+        self.pub_drv_cmd.publish(pose_pub)
+        
+        
+        # rospy.loginfo('', )
+        # rospy.loginfo('\n\n====================Info====================')
+        # rospy.loginfo('Robot Position:\n\t\t\t\tx= %s m \n\t\t\t\ty= %s m', 
+        #               lst_robo_position_curr[0],
+        #               lst_robo_position_curr[1])
+        # rospy.loginfo('Distance between robot and destination:\n\t\t\t\t %s m', 
+        #               dist2go)
+        # rospy.loginfo("Robot's current orientation:\n\t\t\t\t %s Deg", 
+        #               robo_orien_curr)
+        # rospy.loginfo('Orientation error:\n\t\t\t\t %s Deg', orient_err)
         
         # self.rate.sleep()
         
