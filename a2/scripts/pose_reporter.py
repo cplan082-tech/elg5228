@@ -22,7 +22,9 @@ class pose_reporter():
         self.pose = Pose()
         self.dest = Pose()
         
-        self.HT_0_d = self.HT_builder(self.z_elemental(0), np.array([5.5, 5.5, 0]).reshape(-1,1))
+        # self.HT_0_d = self.HT_builder(self.z_elemental(0), np.array([5.7, 5.7, 0]).reshape(-1,1))
+        self.R_0_d = self.z_elemental(0)
+        self.p_0 = np.array([5.5, 5.5, 0]).reshape(-1,1)
         
 
     def callback_pose(self, received_message):
@@ -33,25 +35,25 @@ class pose_reporter():
     
     def callback_dest(self, received_message):
         self.dest = received_message
+        self.R_0_d = self.z_elemental(np.arctan2(self.dest.y, self.dest.x))
+        self.p_0 = np.array([self.dest.x, self.dest.y, 0]).reshape(-1,1)
         
         
     def loginfo_pub(self):
         # R_0_d stands for destination(d) orientation wrt world frame(0)
-        R_0_d = self.z_elemental(np.arctan2(self.dest.y, self.dest.x))
         R_t_0 = self.z_elemental(self.pose.theta).T
         
         # position of dest wrt to world frame
-        p_0 = np.array([self.dest.x, self.dest.y, 0]).reshape(-1,1)
         q_0 = np.array([self.pose.x, self.pose.y, 0]).reshape(-1,1)
         
-        self.HT_0_d = self.HT_builder(R_0_d, p_0)
+        HT_0_d = self.HT_builder(self.R_0_d, self.p_0)
         HT_0_t = self.HT_builder(R_t_0, -np.dot(R_t_0, q_0))
         
-        self.HT_t_d = np.dot(HT_0_t, self.HT_0_d)
+        HT_t_d = np.dot(HT_0_t, HT_0_d)
         
         # log info
-        dist2go = np.sqrt(self.HT_t_d[0,3]**2 + self.HT_t_d[1,3]**2)
-        orient_err = np.rad2deg(np.arctan2(self.HT_t_d[1,3], self.HT_t_d[0,3]))
+        dist2go = np.sqrt(HT_t_d[0,3]**2 + HT_t_d[1,3]**2)
+        orient_err = np.rad2deg(np.arctan2(HT_t_d[1,3], HT_t_d[0,3]))
         
         pose_pub = Pose()
         pose_pub.x = self.pose.x
@@ -62,22 +64,19 @@ class pose_reporter():
         pose_pub.angular_velocity = orient_err
         
         rospy.loginfo('\n\n====================Info====================')
-        rospy.loginfo(pose_pub)
+        # rospy.loginfo(pose_pub)
         self.pub_drv_cmd.publish(pose_pub)
         
+        rospy.loginfo('Robot Position:\n\t\t\t\tx= %s m \n\t\t\t\ty= %s m', 
+                      pose_pub.x,
+                      pose_pub.y)
+        rospy.loginfo('Distance between robot and destination:\n\t\t\t\t %s m', 
+                      dist2go)
+        rospy.loginfo("Robot's current orientation:\n\t\t\t\t %s Deg", 
+                      pose_pub.theta)
+        rospy.loginfo('Orientation error:\n\t\t\t\t %s Deg', orient_err)
         
-        # rospy.loginfo('', )
-        # rospy.loginfo('\n\n====================Info====================')
-        # rospy.loginfo('Robot Position:\n\t\t\t\tx= %s m \n\t\t\t\ty= %s m', 
-        #               lst_robo_position_curr[0],
-        #               lst_robo_position_curr[1])
-        # rospy.loginfo('Distance between robot and destination:\n\t\t\t\t %s m', 
-        #               dist2go)
-        # rospy.loginfo("Robot's current orientation:\n\t\t\t\t %s Deg", 
-        #               robo_orien_curr)
-        # rospy.loginfo('Orientation error:\n\t\t\t\t %s Deg', orient_err)
-        
-        # self.rate.sleep()
+        self.rate.sleep()
         
     
     def z_elemental(self, gamma):            

@@ -7,17 +7,22 @@ import numpy as np
 
 class robot_driver():
     
-    eps = 7e-1
-    min_vel = 5e-2
-    dist_arrived = 10e-2
+    eps = 5e-1 # Smallest acceptable orientation error
+    slow_zone_angle = 2 # error angle in deg where angular vel = min_vel
+    slow_zone_dist = 1 # error angle in deg where angular vel = min_vel
+    dist_arrived = 10e-2 # min distance error in cm where destination is considered reached
     
-    def __init__(self, rot_spd, drv_spd):
-        rospy.init_node('robot_driver', anonymous=False)
+    rot_spd = 2 # gain of angular vel P controller
+    drv_spd = 0.8 # gain of linear vel P controller
+    min_vel_ang = 1e-2
+    min_vel_lin = 0.1
+    
+    def __init__(self):
         
-        self.rate = rospy.Rate(20)
+        # initialise node that must be unique
+        rospy.init_node('robot_driver', anonymous=False) 
         
-        self.rot_spd = rot_spd
-        self.drv_spd = drv_spd
+        self.rate = rospy.Rate(20) # frequency of cmd_vel to turtlesim bot in Hz
         
         self.drv_cmd = Pose()
         self.vel = Twist()
@@ -32,26 +37,34 @@ class robot_driver():
         
     def publish_drv_cmd(self):
         dist2go = self.drv_cmd.linear_velocity
-        angle_t_d = self.drv_cmd.angular_velocity
-        direction = self.rot_spd*np.sign(angle_t_d) # if angle is -tiv, must turn CCW (+tiv rot)
+        angle_t_d = self.drv_cmd.angular_velocity # messgae sent in deg, algo uses rad
+        direction = robot_driver.rot_spd*np.sign(angle_t_d) # if angle is -tiv, must turn CCW (+tiv rot)
         
         if dist2go > robot_driver.dist_arrived:
             
             if abs(angle_t_d) > robot_driver.eps:
                 self.vel.linear.x = 0
+                u_ang_vel = angle_t_d*robot_driver.rot_spd/180 # normalised
                 # self.vel.angular.z = direction
-                angular_vel = angle_t_d*self.rot_spd/180
                 
-                if (abs(angular_vel) < robot_driver.min_vel):
-                    self.vel.angular.z = robot_driver.min_vel*direction
-                    
+                if (abs(angle_t_d) < robot_driver.slow_zone_angle) or \
+                    (abs(u_ang_vel) < robot_driver.min_vel_ang):
+                    self.vel.angular.z = robot_driver.min_vel_ang*direction
                 else:
-                    self.vel.angular.z = angular_vel
+                    self.vel.angular.z = u_ang_vel
+
                 
             else:
                 self.vel.angular.z = 0
+                u_lin_vel = dist2go*robot_driver.drv_spd
                 # self.vel.linear.x = self.drv_spd
-                self.vel.linear.x = dist2go
+                
+                if (dist2go > robot_driver.slow_zone_dist) or \
+                    (u_lin_vel > robot_driver.min_vel_lin):
+                    self.vel.linear.x = u_lin_vel
+                
+                else:
+                    self.vel.linear.x = robot_driver.min_vel_lin
                 
         else:
             self.vel.linear.x = 0
@@ -62,10 +75,8 @@ class robot_driver():
 
         
 if __name__ == '__main__':
-    rot_spd = 1
-    drv_spd = 1
     
-    obj = robot_driver(rot_spd, drv_spd)
+    obj = robot_driver()
     while not rospy.is_shutdown():
         try:
             obj.publish_drv_cmd()
@@ -73,4 +84,3 @@ if __name__ == '__main__':
         except rospy.ROSInterruptException:
             pass
         obj.rate.sleep()
-    # rospy.spin()
