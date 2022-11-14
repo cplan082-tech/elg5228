@@ -45,7 +45,6 @@ class robot_driver():
             if abs(angle_t_d) > robot_driver.eps:
                 self.vel.linear.x = 0
                 u_ang_vel = angle_t_d*robot_driver.rot_spd/180 # normalised
-                # self.vel.angular.z = direction
                 
                 if (abs(angle_t_d) < robot_driver.slow_zone_angle) or \
                     (abs(u_ang_vel) < robot_driver.min_vel_ang):
@@ -57,7 +56,6 @@ class robot_driver():
             else:
                 self.vel.angular.z = 0
                 u_lin_vel = dist2go*robot_driver.drv_spd
-                # self.vel.linear.x = self.drv_spd
                 
                 if (dist2go > robot_driver.slow_zone_dist) or \
                     (u_lin_vel > robot_driver.min_vel_lin):
