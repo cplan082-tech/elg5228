@@ -83,6 +83,14 @@ class pose_reporter():
                       self.pose_pub.theta)
         rospy.loginfo('Orientation error:\n\t\t\t\t %s Deg', orient_err)
         
+        # Checks if destionation has been reached
+        if dist2go < 10e-2: # True if dest2go smaller than 10 cm
+            arrived = True
+        else:
+            arrived = False
+            
+        rospy.loginfo('Arrived at Destination:\n\t\t\t\t %s', arrived)
+        
         self.pub_drv_cmd.publish(self.pose_pub) # publish drv cmd's
         
         self.rate.sleep() # ensure pub @ 2Hz
