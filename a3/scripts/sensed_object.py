@@ -26,23 +26,46 @@ class sense_object():
         
     def pub_direction_heading(self):
         msg_direction_heading = Pose2D() # published msg
+        msg_direction_heading.y = float('NaN')
         msg = self.msg_lidar
         msg_rng = msg.ranges
         
         arr_rng = np.array(msg_rng)
-        
         arr_rng[arr_rng > msg.range_max] = float('NaN')
         arr_rng[arr_rng < msg.range_min] = float('NaN')
         
-        msg_direction_heading.x = np.nanmin(arr_rng)
-        idx = np.reshape(np.argwhere(arr_rng == msg_direction_heading.x), -1) # convert 2dim arr to 1 dim arr
-        msg_direction_heading.theta = np.rad2deg(idx*msg.angle_increment + msg.angle_min)       
+        # =================================================        
+        # msg_direction_heading.x = np.nanmin(arr_rng)
+        # idx = np.reshape(np.argwhere(arr_rng == msg_direction_heading.x), -1) # convert 2dim arr to 1 dim arr
         
-
-        rospy.loginfo("Min dist. = %7.3f, Angles = %7.3f", 
+        # try:
+        #     msg_direction_heading.theta = np.rad2deg(idx*msg.angle_increment + msg.angle_min)[0]      
+        # except:
+        #     msg_direction_heading.theta = float('NaN')
+        
+        # msg_direction_heading.y = float('NaN')
+        # rospy.loginfo("Min dist. = %7.3f, Angles = %7.3f", 
+        #               msg_direction_heading.x, 
+        #               msg_direction_heading.theta) 
+        
+        # print('hit_end')
+        # self.pub.publish(msg_direction_heading)
+        # self.rate.sleep()
+        
+        # ==================================================
+        # print('pre')
+        if not (np.isnan(arr_rng)).all():
+            msg_direction_heading.x = np.nanmin(arr_rng)
+            idx = np.reshape(np.argwhere(arr_rng == msg_direction_heading.x), -1) # convert 2dim arr to 1 dim arr
+            msg_direction_heading.theta = np.rad2deg(idx*msg.angle_increment + msg.angle_min)       
+            
+        else:
+            msg_direction_heading.x = float('NaN')
+            msg_direction_heading.theta = float('NaN')
+            
+        rospy.loginfo("Min dist. = %7.3f m, Angles = %7.3f deg", 
                       msg_direction_heading.x, 
                       msg_direction_heading.theta) 
-        
         self.pub.publish(msg_direction_heading)
         self.rate.sleep()
 
@@ -56,31 +79,4 @@ if __name__ == "__main__":
             obj.pub_direction_heading()
         except:
             pass
-    
-# Functions vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-# def callback(msg):
-#     msg_rng = msg.ranges
-    
-#     arr_rng = np.array(msg_rng)
-    
-#     arr_rng[arr_rng > msg.range_max] = float('NaN')
-#     arr_rng[arr_rng < msg.range_min] = float('NaN')
-    
-#     min_dist = np.nanmin(arr_rng)
-#     idx = np.reshape(np.argwhere(arr_rng == min_dist), -1) # convert 2dim arr to 1 dim arr
-
-#     rospy.loginfo("Min dist. = %7.3f, Angles = %7.3f", 
-#                   min_dist, 
-#                   np.rad2deg(idx*msg.angle_increment + msg.angle_min))
-    
-    
-# def lsr_scn_rd():
-#     rospy.init_node('sensed_object', anonymous=False)
-#     rospy.Subscriber('/scan', LaserScan, callback)
-#     rospy.spin()
-    
-    
-    
-
-# if __name__ == "__main__":
-#     lsr_scn_rd()
+    # 
