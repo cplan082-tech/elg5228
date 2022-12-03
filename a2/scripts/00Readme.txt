@@ -12,7 +12,7 @@ Package Creation
 		○ i.e. 'target_publisher.py', 'pose_reporter.py' and 'robot_driver.py'
 	- Change to 'scripts' directory
 		○ cmd:
-			§ Cd ./a2/scripts
+			§ cd ./a2/scripts
 	- Make files executable
 		○ cmd:
 			§ chmod +x target_publisher.py pose_reporter.py robot_driver.py
