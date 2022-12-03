@@ -12,3 +12,13 @@
 	- i.e. 'sensed_object.py' and 'navigate_robot.py'
 
 
+- Source pkg
+	- cmd:
+		- source ~/catkin_ws/devel/setup.bash
+
+- enable LiDAR
+	- cmd:
+		- export HUSKY_LMS1XX_ENABLED=1
+
+
+
