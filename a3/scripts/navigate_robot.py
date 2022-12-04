@@ -11,13 +11,14 @@ class cls_navigate_robot():
     e = 0.7
     
     eps_ang = 5
+    eps_circ_ang = 1
     eps_dist = 1e-1
     
     zone_frwd_angle = 15 # error angle in deg where angular vel = min_vel
     slow_zone_dist = 1 # error angle in deg where angular vel = min_vel
     
     # proportional gain (K_p) for P type controller
-    kp_ang = 2
+    kp_ang = 1
     kp_lin = 0.5
     
     max_frwd_vel = kp_ang
@@ -90,9 +91,6 @@ class cls_navigate_robot():
     
     
     def track_obj(self):
-        # msg_sensObj = self.msg_sensObj
-        # err_dist = msg_sensObj.x 
-        # err_angle = msg_sensObj.theta
         
         err_dist, err_angle = self.get_obj_err()
         
@@ -141,10 +139,15 @@ class cls_navigate_robot():
     
     def move2circ_position(self):
         err_dist, err_angle = self.get_obj_err()
+        print(err_dist)
+        # ensures cir_phase was not accidently engaged
+        if err_dist > cls_navigate_robot.e:
+            self.track_obj_phase = True
+            self.mv2circ_pos_phase = False
         
         # 0.143 m is dist between lsr and front bumper
         # 0.337074 m is dist between lsr and outside left wheel
-        if err_dist < cls_navigate_robot.eps_dist + 0.337074: 
+        elif err_dist < cls_navigate_robot.eps_dist + 0.337074: 
             lin_vel_x = 0
             self.mv2circ_pos_phase = False
             self.cir_orientation_set_phase = True
@@ -153,14 +156,65 @@ class cls_navigate_robot():
             lin_vel_x = cls_navigate_robot.min_frwd_vel
         
         self.publish_cmd_vel(lin_vel_x, 0)
+        
+        
+        
+    def cir_orientation_set(self):
+        err_dist, err_angle = self.get_obj_err()
+        err_ang_circ = err_angle - 90
+        
+        if err_dist > cls_navigate_robot.e:
+            self.track_obj_phase = True
+            self.mv2circ_pos_phase = False 
+        
+        elif abs(err_ang_circ) > cls_navigate_robot.eps_circ_ang:
+            ang_vel_z = self.find_ang_vel(err_ang_circ)
+            
+        else:
+            ang_vel_z = 0
+            self.cir_orientation_set_phase = False
+            self.circumvent_phase = True
+        
+        self.publish_cmd_vel(0, ang_vel_z)
+        
+        
+        
     
     
+    
+    def process_sequencer(self):
+        if self.track_obj_phase:
+            self.track_obj()
+            print('track_obj_phase')
+            
+        elif self.mv2circ_pos_phase:
+            self.move2circ_position()
+            print('mv2circ_pos_phase')
+            
+        elif self.cir_orientation_set_phase:
+            self.cir_orientation_set()
+            
+            # for testing vvvvvvvvvvvvvvvvvvvvvvvvvvv
+            print('cir_orientation_set_phase')
+            # self.cir_orientation_set_phase = False
+            # self.track_obj_phase = True
+            # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        
+        elif self.circumvent_phase:
+            print('circumvent_phase')
+            self.track_obj_phase = True
+            self.mv2circ_pos_phase = False
+        
+        
+        
+
     def get_obj_err(self):
         msg_sensObj = self.msg_sensObj
         
         return msg_sensObj.x, msg_sensObj.theta
-
-
+        
+        
+        
     def vel_check(self, vel, min_vel, max_vel):
         if vel > max_vel:
             vel = max_vel
@@ -170,25 +224,6 @@ class cls_navigate_robot():
             
         return vel
     
-    
-    
-    def process_sequencer(self):
-        if self.track_obj_phase:
-            self.track_obj()
-            
-        elif self.mv2circ_pos_phase:
-            self.move2circ_position()
-            
-        elif self.cir_orientation_set_phase:
-            # for testing vvvvvvvvvvvvvvvvvvvvvvvvvvv
-            print('here')
-            self.cir_orientation_set_phase = False
-            self.track_obj_phase = True
-            # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        
-        else:
-            pass
-        
         
         
 if __name__ == "__main__":
