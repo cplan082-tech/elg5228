@@ -9,9 +9,10 @@ from geometry_msgs.msg import Pose2D, Twist
 
 class cls_navigate_robot():
     e = 0.7
+    e_buffr = e + 1e-1
     
     eps_ang = 5
-    eps_circ_ang = 1
+    eps_circ_ang = .5
     eps_dist = 1e-1
     
     zone_frwd_angle = 15 # error angle in deg where angular vel = min_vel
@@ -21,11 +22,12 @@ class cls_navigate_robot():
     kp_ang = 1
     kp_lin = 0.5
     
-    max_frwd_vel = kp_ang
+    max_frwd_vel = kp_lin
     min_frwd_vel = 0.05
     
     max_ang_vel = 3
-    min_ang_vel = 0.2
+    max_circ_ang_vel = 3
+    min_ang_vel = 0.1
     
     def __init__(self):
         rospy.init_node('navigate_robot', anonymous=False)
@@ -94,12 +96,13 @@ class cls_navigate_robot():
         
         err_dist, err_angle = self.get_obj_err()
         
+        # obstacle reached
         if err_dist < cls_navigate_robot.e:
             lin_vel_x = 0
             ang_vel_z = 0
             self.track_obj_phase = False
             self.mv2circ_pos_phase = True
-            # self.update_target() # TODO: Remove once done testing
+            self.update_target()
             
         elif abs(err_angle) > cls_navigate_robot.zone_frwd_angle:
             lin_vel_x = 0
@@ -141,7 +144,7 @@ class cls_navigate_robot():
         err_dist, err_angle = self.get_obj_err()
         print(err_dist)
         # ensures cir_phase was not accidently engaged
-        if err_dist > cls_navigate_robot.e:
+        if err_dist > cls_navigate_robot.e_buffr:
             self.track_obj_phase = True
             self.mv2circ_pos_phase = False
         
@@ -163,7 +166,7 @@ class cls_navigate_robot():
         err_dist, err_angle = self.get_obj_err()
         err_ang_circ = err_angle - 90
         
-        if err_dist > cls_navigate_robot.e:
+        if err_dist > cls_navigate_robot.e_buffr:
             self.track_obj_phase = True
             self.mv2circ_pos_phase = False 
         
@@ -172,11 +175,17 @@ class cls_navigate_robot():
             
         else:
             ang_vel_z = 0
-            self.cir_orientation_set_phase = False
-            self.circumvent_phase = True
+            # self.cir_orientation_set_phase = False
+            # self.circumvent_phase = True
         
-        self.publish_cmd_vel(0, ang_vel_z)
+        return ang_vel_z
         
+        
+        
+    
+    def circumvent(self):
+        err_dist, err_angle = self.get_obj_err()
+        err_ang_circ = err_angle - 90
         
         
     
@@ -185,25 +194,27 @@ class cls_navigate_robot():
     def process_sequencer(self):
         if self.track_obj_phase:
             self.track_obj()
-            print('track_obj_phase')
+            print('track_obj_phase') # TODO: Remove once done testin
             
         elif self.mv2circ_pos_phase:
             self.move2circ_position()
-            print('mv2circ_pos_phase')
+            print('mv2circ_pos_phase') # TODO: Remove once done testin
             
         elif self.cir_orientation_set_phase:
-            self.cir_orientation_set()
+            ang_vel_z = self.cir_orientation_set()
             
-            # for testing vvvvvvvvvvvvvvvvvvvvvvvvvvv
-            print('cir_orientation_set_phase')
-            # self.cir_orientation_set_phase = False
-            # self.track_obj_phase = True
-            # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            # z == 0 if orientated properly
+            if ang_vel_z == 0:   
+                self.cir_orientation_set_phase = False
+                self.circumvent_phase = True
+                
+            self.publish_cmd_vel(0, ang_vel_z)
+            print('cir_orientation_set_phase') # TODO: Remove once done testin
         
         elif self.circumvent_phase:
-            print('circumvent_phase')
             self.track_obj_phase = True
             self.mv2circ_pos_phase = False
+            print('circumvent_phase') # TODO: Remove once done testin
         
         
         
