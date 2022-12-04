@@ -98,10 +98,13 @@ class cls_navigate_robot():
         elif abs(err_angle) > cls_navigate_robot.zone_frwd_angle:
             lin_vel_x = 0
             ang_vel_z = self.find_ang_vel(err_angle)
+        
+        elif abs(err_angle) < cls_navigate_robot.eps_ang:
+            lin_vel_x = self.find_lin_vel(err_dist)
+            ang_vel_z = 0
             
         else:
             lin_vel_x = self.find_lin_vel(err_dist)
-            
             ang_vel_z = self.find_ang_vel(err_angle)
             
         self.publish_cmd_vel(lin_vel_x, ang_vel_z)
