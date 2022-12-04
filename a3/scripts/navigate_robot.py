@@ -9,7 +9,17 @@ from geometry_msgs.msg import Pose2D, Twist
 
 class cls_navigate_robot():
     e = 0.7
+    
     eps_ang = 5
+    eps_dist = 1e-1
+    
+    slow_zone_angle = 2 # error angle in deg where angular vel = min_vel
+    slow_zone_dist = 1 # error angle in deg where angular vel = min_vel
+    
+    # proportional gain (K_p) for P type controller
+    kp_ang = 2
+    kp_lin = 0.8
+    
     max_frwd_vel = 0.5
     max_ang_vel = 0.5
     
@@ -48,7 +58,7 @@ class cls_navigate_robot():
         
         if abs(angle_err) > cls_navigate_robot.eps_ang:
             msg_cmd_vel.linear.x = 0
-            msg_cmd_vel.angular.z = direction*cls_navigate_robot.max_ang_vel
+            msg_cmd_vel.angular.z = -1*cls_navigate_robot.kp_ang*angle_err/180
             
         else:
             msg_cmd_vel.linear.x = 0
