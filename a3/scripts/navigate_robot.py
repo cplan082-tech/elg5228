@@ -32,7 +32,7 @@ class cls_navigate_robot():
         self.pub_cmd_vel = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
         
         self.msg_sensObj = Pose2D()
-        self.msg_husky_pose = Twist()
+        self.msg_pose_husky = Twist()
         
         # For testing vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
         # self.pub_test_sensObj = rospy.Publisher('/test_sensObj', Pose2D, queue_size=10)
@@ -46,9 +46,39 @@ class cls_navigate_robot():
         
         
     def callback_husky_pose(self, msg):
-        self.msg_husky_pose = msg
-        msg_husky_orientation = self.msg_husky_pose.pose.pose.orientation
-        self.quat2euler(msg_husky_orientation)
+        self.msg_pose_husky = msg
+        msg_sensObj = self.msg_sensObj
+        
+        orientation_husky = self.msg_pose_husky.pose.pose.orientation
+        arr_orientation_husky = np.array([orientation_husky.x,
+                                          orientation_husky.y,
+                                          orientation_husky.z,
+                                          orientation_husky.w])
+        
+        # numpy arr
+        arr_orientation_obj = quaternion_from_euler(0, 
+                                                0, 
+                                                np.deg2rad(self.msg_sensObj.theta))
+        
+        # arr_orientation_test = quaternion_from_euler(0, 
+        #                                         0, 
+        #                                         np.pi-2)
+        
+        # arr_quat_obj_husky = quaternion_multiply(arr_orientation_obj, arr_orientation_husky)
+        arr_quat_obj_husky = quaternion_multiply(arr_orientation_husky, arr_orientation_obj)
+        
+        print("Robot wrt world: {}".format(np.rad2deg(euler_from_quaternion(arr_orientation_husky)[2])))
+        print("Obj wrt LiDAR: {}".format(np.rad2deg(euler_from_quaternion(arr_orientation_obj)[2])))
+        print("Robot wrt LiDAR: {}".format(np.rad2deg(euler_from_quaternion(arr_quat_obj_husky)[2])))
+        print('\n\n\n\n')
+        
+        # print(euler_from_quaternion(arr_quat_obj_husky))
+        # print(type(arr_orientation_obj))
+        # print(arr_orientation_obj)
+        
+        orientation_euler_husky = self.quat2euler(orientation_husky)
+        # print(type(np.array(orientation_euler_husky)))
+        # print(orientation_euler_husky[2])
         
 
     def publish_cmd_vel(self):
@@ -74,7 +104,7 @@ class cls_navigate_robot():
                     orientation.y,
                     orientation.z,
                     orientation.w]
-        print(euler_from_quaternion(lst_quat))
+        return euler_from_quaternion(lst_quat)
         
         
 if __name__ == "__main__":
