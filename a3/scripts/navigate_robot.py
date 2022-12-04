@@ -128,10 +128,17 @@ class cls_navigate_robot():
     
     
     def track_obj(self):
-        msg_sensObj = self.msg_sensObj        
-        self.publish_cmd_vel(self.find_lin_vel(msg_sensObj), 
-                             self.find_ang_vel(msg_sensObj))
+        msg_sensObj = self.msg_sensObj
         
+        lin_vel_x = self.find_lin_vel(msg_sensObj)
+        
+        if lin_vel_x > 0:
+            ang_vel_z = self.find_ang_vel(msg_sensObj)
+            
+        else:
+            ang_vel_z = 0
+            
+        self.publish_cmd_vel(lin_vel_x, ang_vel_z)
         
 if __name__ == "__main__":
     obj = cls_navigate_robot()
