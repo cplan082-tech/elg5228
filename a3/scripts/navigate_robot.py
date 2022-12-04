@@ -13,12 +13,12 @@ class cls_navigate_robot():
     eps_ang = 5
     eps_dist = 1e-1
     
-    slow_zone_angle = 2 # error angle in deg where angular vel = min_vel
+    zone_frwd_angle = 15 # error angle in deg where angular vel = min_vel
     slow_zone_dist = 1 # error angle in deg where angular vel = min_vel
     
     # proportional gain (K_p) for P type controller
-    kp_ang = 2
-    kp_lin = 0.8
+    kp_ang = 0.8
+    kp_lin = 0.5
     
     max_frwd_vel = 0.5
     max_ang_vel = 0.5
@@ -43,6 +43,7 @@ class cls_navigate_robot():
         
     def callback_sensObj(self, msg):
         self.msg_sensObj = msg
+        
         
         
     def callback_husky_pose(self, msg):
@@ -71,53 +72,31 @@ class cls_navigate_robot():
         
         # orientation_euler_husky = self.quat2euler(orientation_husky)
         
+        
 
     def publish_cmd_vel(self, x, z):
         msg_cmd_vel = Twist()
         msg_cmd_vel.linear.x = x
         msg_cmd_vel.angular.z = z
-        # msg_sensObj = self.msg_sensObj
-        
-        # err_angle = msg_sensObj.theta
-        # direction = np.sign(err_angle)*-1
-        
-        # if abs(err_angle) > cls_navigate_robot.eps_ang:
-        #     msg_cmd_vel.linear.x = 0
-        #     msg_cmd_vel.angular.z = -1*cls_navigate_robot.kp_ang*err_angle/180
-            
-        # else:
-        #     msg_cmd_vel.linear.x = 0
-        #     msg_cmd_vel.angular.z = 0
             
         self.pub_cmd_vel.publish(msg_cmd_vel)
         
         
-    def find_ang_vel(self, msg_sensObj):
-        # msg_sensObj = self.msg_sensObj
         
-        err_angle = msg_sensObj.theta
-        direction = np.sign(err_angle)*-1
-        
-        if abs(err_angle) > cls_navigate_robot.eps_ang:
-            angular_z = -1*cls_navigate_robot.kp_ang*err_angle/180
-            
-        else:
-            angular_z = 0
-            
-        return angular_z
+    def find_ang_vel(self, err_angle):       
+        # err_angle = msg_sensObj.theta
+        direction = np.sign(err_angle)*-1  
+          
+        return -1*cls_navigate_robot.kp_ang*err_angle/180
     
     
-    def find_lin_vel(self, msg_sensObj):
-        err_dist = msg_sensObj.x
+    
+    def find_lin_vel(self, err_dist):
+        # err_dist = msg_sensObj.x      
         
-        if err_dist > cls_navigate_robot.e:
-            lin_x = cls_navigate_robot.kp_lin*err_dist
-            
-        else:
-            lin_x = 0
-            
-        return lin_x
+        return cls_navigate_robot.kp_lin*err_dist
         
+    
     
     def quat2euler(self, orientation):
         lst_quat = [orientation.x,
@@ -127,18 +106,35 @@ class cls_navigate_robot():
         return euler_from_quaternion(lst_quat)
     
     
+    
     def track_obj(self):
         msg_sensObj = self.msg_sensObj
+        err_dist = msg_sensObj.x 
+        err_angle = msg_sensObj.theta
         
-        lin_vel_x = self.find_lin_vel(msg_sensObj)
+        if err_dist < cls_navigate_robot.e:
+            lin_vel_x = 0
+            ang_vel_z = 0
         
-        if lin_vel_x > 0:
-            ang_vel_z = self.find_ang_vel(msg_sensObj)
+        elif abs(err_angle) > cls_navigate_robot.zone_frwd_angle:
+            lin_vel_x = 0
+            ang_vel_z = self.find_ang_vel(err_angle)
             
         else:
-            ang_vel_z = 0
+            lin_vel_x = self.find_lin_vel(err_dist)
+            ang_vel_z = self.find_ang_vel(err_angle)
+        
+        # lin_vel_x = self.find_lin_vel(err_dist)
+        
+        # if lin_vel_x > 0:
+        #     ang_vel_z = self.find_ang_vel(err_angle)
+            
+        # else:
+        #     ang_vel_z = 0
             
         self.publish_cmd_vel(lin_vel_x, ang_vel_z)
+        
+        
         
 if __name__ == "__main__":
     obj = cls_navigate_robot()
