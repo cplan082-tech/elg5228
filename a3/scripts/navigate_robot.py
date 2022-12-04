@@ -47,8 +47,10 @@ class cls_navigate_robot():
         
     def callback_husky_pose(self, msg):
         self.msg_husky_pose = msg
+        msg_husky_orientation = self.msg_husky_pose.pose.pose.orientation
+        self.quat2euler(msg_husky_orientation)
         
-        
+
     def publish_cmd_vel(self):
         msg_cmd_vel = Twist()
         msg_sensObj = self.msg_sensObj
@@ -65,6 +67,14 @@ class cls_navigate_robot():
             msg_cmd_vel.angular.z = 0
             
         self.pub_cmd_vel.publish(msg_cmd_vel)
+        
+    
+    def quat2euler(self, orientation):
+        lst_quat = [orientation.x,
+                    orientation.y,
+                    orientation.z,
+                    orientation.w]
+        print(euler_from_quaternion(lst_quat))
         
         
 if __name__ == "__main__":
