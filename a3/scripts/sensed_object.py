@@ -5,20 +5,19 @@ import rospy
 from geometry_msgs.msg import Pose2D
 from sensor_msgs.msg import LaserScan
 
-
-class sense_object():
+class cls_sense_object():
     
     def __init__(self):
         # initialise "robot_driver" node that must be unique
         rospy.init_node('sense_object', anonymous=False) 
         
-        self.rate = rospy.Rate(2) # publish frequency in Hz
-        
-        self.msg_lidar = LaserScan() # subed msg
-        
         # Publisher/Subscriber object instantiation
         self.sub = rospy.Subscriber('/scan', LaserScan, self.callback)
         self.pub = rospy.Publisher('/sense_object', Pose2D, queue_size=10)
+        
+        self.msg_lidar = LaserScan() # subed msg
+        
+        self.rate = rospy.Rate(2) # publish frequency in Hz
         
         
     def callback(self, msg):
@@ -54,7 +53,7 @@ class sense_object():
 
 if __name__ == "__main__":
     
-    obj = sense_object()
+    obj = cls_sense_object()
     while not rospy.is_shutdown():
         try:
             obj.pub_direction_heading()

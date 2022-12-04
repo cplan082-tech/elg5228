@@ -2,7 +2,7 @@
 	- cmd: cd ~/catkin_ws/src/course_dir/
 
 - Create pkg a3
-	- cmd: catkin_create_pkg a3 rospy sensor_msg
+	- cmd: catkin_create_pkg a3 rospy sensor_msgs geometry_msgs nav_msgs tf
 
 - Make "scripts" folder in pkg "a3"
 	- cmd:
