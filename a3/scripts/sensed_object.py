@@ -34,26 +34,7 @@ class sense_object():
         arr_rng[arr_rng > msg.range_max] = float('NaN')
         arr_rng[arr_rng < msg.range_min] = float('NaN')
         
-        # =================================================        
-        # msg_direction_heading.x = np.nanmin(arr_rng)
-        # idx = np.reshape(np.argwhere(arr_rng == msg_direction_heading.x), -1) # convert 2dim arr to 1 dim arr
-        
-        # try:
-        #     msg_direction_heading.theta = np.rad2deg(idx*msg.angle_increment + msg.angle_min)[0]      
-        # except:
-        #     msg_direction_heading.theta = float('NaN')
-        
-        # msg_direction_heading.y = float('NaN')
-        # rospy.loginfo("Min dist. = %7.3f, Angles = %7.3f", 
-        #               msg_direction_heading.x, 
-        #               msg_direction_heading.theta) 
-        
-        # print('hit_end')
-        # self.pub.publish(msg_direction_heading)
-        # self.rate.sleep()
-        
-        # ==================================================
-        # print('pre')
+        # Test if within range. If not, send 'nan'
         if not (np.isnan(arr_rng)).all():
             msg_direction_heading.x = np.nanmin(arr_rng)
             idx = np.reshape(np.argwhere(arr_rng == msg_direction_heading.x), -1) # convert 2dim arr to 1 dim arr
