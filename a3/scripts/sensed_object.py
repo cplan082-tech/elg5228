@@ -17,7 +17,6 @@ class cls_sense_object():
         
         self.msg_lidar = LaserScan() # subed msg
         
-        self.rate = rospy.Rate(2) # publish frequency in Hz
         
         
     def callback(self, msg):
