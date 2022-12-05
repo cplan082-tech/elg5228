@@ -12,7 +12,7 @@ class cls_navigate_robot():
     e_buffr = e + 5e-1
     
     eps_ang = 5
-    eps_circ_ang = 2
+    eps_circ_ang = 0.5
     eps_dist = 1e-1
     
     zone_frwd_angle = 15 # error angle in deg where angular vel = min_vel
@@ -23,7 +23,7 @@ class cls_navigate_robot():
     kp_lin = 0.5
     
     kp_ang_circ = 3
-    ki_ang_circ = 0.05
+    ki_ang_circ = 0.01
     
     max_frwd_vel = kp_lin
     min_frwd_vel = 0.1
@@ -76,12 +76,11 @@ class cls_navigate_robot():
         self.pub_cmd_vel.publish(msg_cmd_vel)
         
         
-    def find_ang_vel(self, err_angle, kp, min_vel, max_vel):     
-        
+    def find_ang_vel(self, err_angle):       
         direction = np.sign(err_angle)*-1
-        ang_vel = self.vel_check(abs(kp*err_angle/180), 
-                                 min_vel,
-                                 max_vel)
+        ang_vel = self.vel_check(abs(cls_navigate_robot.kp_ang*err_angle/180), 
+                                 cls_navigate_robot.min_ang_vel,
+                                 cls_navigate_robot.max_ang_vel)
           
         return direction*ang_vel
     
@@ -113,10 +112,7 @@ class cls_navigate_robot():
             
         elif abs(err_angle) > cls_navigate_robot.zone_frwd_angle:
             lin_vel_x = 0
-            ang_vel_z = self.find_ang_vel(err_angle, 
-                                          cls_navigate_robot.kp_ang, 
-                                          cls_navigate_robot.min_ang_vel, 
-                                          cls_navigate_robot.max_ang_vel)
+            ang_vel_z = self.find_ang_vel(err_angle)
         
         elif abs(err_angle) < cls_navigate_robot.eps_ang:
             lin_vel_x = self.find_lin_vel(err_dist)
@@ -124,10 +120,7 @@ class cls_navigate_robot():
             
         else:
             lin_vel_x = self.find_lin_vel(err_dist)
-            ang_vel_z = self.find_ang_vel(err_angle, 
-                                          cls_navigate_robot.kp_ang, 
-                                          cls_navigate_robot.min_ang_vel, 
-                                          cls_navigate_robot.max_ang_vel)
+            ang_vel_z = self.find_ang_vel(err_angle)
             
         self.publish_cmd_vel(lin_vel_x, ang_vel_z)
         
@@ -198,10 +191,7 @@ class cls_navigate_robot():
         
         # If angle error greater than thresh., contrinue turning
         elif abs(err_ang_circ) > cls_navigate_robot.eps_circ_ang: # TODO: Implement P cntrl here
-            ang_vel_z = -1*np.sign(self.find_ang_vel(err_ang_circ, 
-                                                     cls_navigate_robot.kp_ang, 
-                                                     cls_navigate_robot.min_ang_vel, 
-                                                     cls_navigate_robot.max_ang_vel))*cls_navigate_robot.circ_ang_vel
+            ang_vel_z = -1*self.find_ang_vel(err_ang_circ)*cls_navigate_robot.circ_ang_vel
             
         else:
             ang_vel_z = 0
@@ -216,7 +206,7 @@ class cls_navigate_robot():
     def circumvent(self):
         err_dist, err_angle = self.get_obj_err()
         q_base_x, q_base_y = self.find_q_base(err_dist, err_angle)
-        dist2obj = np.sqrt(q_base_x**2 + q_base_y**2)
+        # dist2obj = np.sqrt(q_base_x**2 + q_base_y**2)
         
         err_dis2obj = self.trg_dist - err_dist
         
