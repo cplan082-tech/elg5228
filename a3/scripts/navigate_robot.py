@@ -23,7 +23,7 @@ class cls_navigate_robot():
     kp_lin = 0.5
     
     kp_ang_circ = 3
-    ki_ang_circ = 0.1
+    ki_ang_circ = 0.05
     
     max_frwd_vel = kp_lin
     min_frwd_vel = 0.05
@@ -31,8 +31,8 @@ class cls_navigate_robot():
     max_ang_vel = 3
     min_ang_vel = 0.1
     
-    circ_lin_vel = 0.1
-    circ_ang_vel = 0.3
+    circ_lin_vel = 0.2
+    circ_ang_vel = 0.5
     
     ang_err_offset = 90
     
