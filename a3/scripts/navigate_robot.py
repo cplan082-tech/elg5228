@@ -9,10 +9,10 @@ from geometry_msgs.msg import Pose2D, Twist
 
 class cls_navigate_robot():
     e = 0.7
-    e_buffr = e + 1e-1
+    e_buffr = e + 5e-1
     
     eps_ang = 5
-    eps_circ_ang = 10
+    eps_circ_ang = 1
     eps_dist = 1e-1
     
     zone_frwd_angle = 15 # error angle in deg where angular vel = min_vel
@@ -28,18 +28,16 @@ class cls_navigate_robot():
     max_ang_vel = 3
     min_ang_vel = 0.1
     
-    circ_lin_vel = 0.5
-    circ_ang_vel = 0.5
+    circ_lin_vel = 0.3
+    circ_ang_vel = 0.3
     
-    ang_err_offset = 90 + 7
+    ang_err_offset = 90
     
     def __init__(self):
         rospy.init_node('navigate_robot', anonymous=False)
         
         # Homogeneous transform for base_laser wrt base_link
-        p_base = np.array([0.337], 
-                               [0], 
-                               [0.307])
+        p_base = np.array([[0.337], [0], [0.307]])
         
         R_link_laser = x_elemental(180)
         self.HT_link_laser = HT_builder(R_link_laser, p_base)
@@ -164,19 +162,31 @@ class cls_navigate_robot():
         
     def cir_orientation_set(self):
         err_dist, err_angle = self.get_obj_err()
-        err_ang_circ = err_angle - cls_navigate_robot.ang_err_offset
+        
+        x = np.cos(np.deg2rad(err_angle))*err_dist
+        y = np.sin(np.deg2rad(err_angle))*err_dist
+        q_laser = np.array([[x], [y], [0]])
+        R_laser_obj = z_elemental(err_angle)
+        HT_laser_obj = HT_builder(R_laser_obj, q_laser)
+        
+        HT_base_obj = np.dot(self.HT_link_laser, HT_laser_obj)
+        R_base_obj, q_base = T_extrct_Rp(HT_base_obj)
+        
+        q_base_x = q_base[0][0]
+        q_base_y = q_base[1][0]
+        err_ang_circ = np.rad2deg(np.arctan2(q_base_y, q_base_x)) + cls_navigate_robot.ang_err_offset
+            
+        # err_ang_circ = err_angle - cls_navigate_robot.ang_err_offset
         
         # ensures cir_phase was not accidently engaged
         if err_dist > cls_navigate_robot.e_buffr:
             self.phase = 'track_obj' 
         
         elif abs(err_ang_circ) > cls_navigate_robot.eps_circ_ang:
-            ang_vel_z = np.sign(self.find_ang_vel(err_ang_circ))*cls_navigate_robot.circ_ang_vel
+            ang_vel_z = -1*np.sign(self.find_ang_vel(err_ang_circ))*cls_navigate_robot.circ_ang_vel
             
         else:
             ang_vel_z = 0
-            # self.cir_orientation_set_phase = False
-            # self.circumvent_phase = True
         
         return ang_vel_z
         
@@ -188,14 +198,18 @@ class cls_navigate_robot():
         if err_dist > cls_navigate_robot.e_buffr:
             self.phase = 'track_obj'
         
-        elif self.dist_from_target() > cls_navigate_robot.eps_dist:
+        # elif self.dist_from_target() > cls_navigate_robot.eps_dist:
+        #     ang_vel_z = self.cir_orientation_set()
+        #     lin_vel_x = cls_navigate_robot.circ_lin_vel
+            
+        # else:
+        #     ang_vel_z = 0
+        #     lin_vel_x = 0
+        #     print("arrived/n/n")
+        
+        else:
             ang_vel_z = self.cir_orientation_set()
             lin_vel_x = cls_navigate_robot.circ_lin_vel
-            
-        else:
-            ang_vel_z = 0
-            lin_vel_x = 0
-            print("arrived/n/n")
             
         self.publish_cmd_vel(lin_vel_x, ang_vel_z)
             
@@ -256,10 +270,29 @@ def x_elemental(alpha, deg=True, rnd=3):
     return R_x
 
 
+def z_elemental(gamma, deg=True, rnd=3):
+    if deg:
+        gamma = np.deg2rad(gamma)
+        
+    R_z = np.array([[np.cos(gamma), -np.sin(gamma), 0],
+                    [np.sin(gamma), np.cos(gamma), 0],
+                    [0, 0, 1]])
+    
+    R_z = np.around(R_z, decimals=rnd) # round all elements of array R_z
+    
+    return R_z
+
+
 def HT_builder(R, p):
     arr_zeros = np.array([[0, 0, 0, 1]])
     
     return np.vstack((np.hstack((R, p)), arr_zeros))
+
+
+def T_extrct_Rp(T):
+    R = T[0:3, 0:3]
+    p = T[0:3, 3].reshape(-1,1)
+    return R,p
     
     
         
