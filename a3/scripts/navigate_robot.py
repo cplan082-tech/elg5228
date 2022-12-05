@@ -59,6 +59,8 @@ class cls_navigate_robot():
         
         self.phase = 'track_obj'
         
+        self.rate = rospy.Rate(10) # publish frequency in Hz
+        
         
     def callback_sensObj(self, msg):
         self.msg_sensObj = msg
@@ -195,7 +197,8 @@ class cls_navigate_robot():
             
         else:
             ang_vel_z = 0
-            self.trg_dist = err_dist
+            if self.phase == 'cir_orientation_set':
+                self.trg_dist = err_dist
         
         return ang_vel_z
         
@@ -206,7 +209,7 @@ class cls_navigate_robot():
         dist2obj = np.sqrt(q_base_x**2 + q_base_y**2)
         
         self.err_dis2obj = self.trg_dist - err_dist
-        print(self.err_dis2obj)
+        print(self.trg_dist)
         
         # return to tracking obstacle
         if err_dist > cls_navigate_robot.e_buffr:
@@ -256,6 +259,8 @@ class cls_navigate_robot():
         elif self.phase == 'circumvent_phase':
             self.circumvent()
             # print('circumvent_phase') # TODO: Remove once done testin
+            
+        self.rate.sleep()
         
         
     def get_obj_err(self):
