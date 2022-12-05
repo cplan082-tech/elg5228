@@ -12,7 +12,7 @@ class cls_navigate_robot():
     e_buffr = e + 5e-1
     
     eps_ang = 5
-    eps_circ_ang = 2
+    eps_circ_ang = 3
     eps_dist = 1e-1
     
     zone_frwd_angle = 15 # error angle in deg where angular vel = min_vel
@@ -20,7 +20,7 @@ class cls_navigate_robot():
     
     # proportional gain (K_p) for P type controller
     kp_ang = 2
-    kp_ang_circ = 3
+    kp_ang_circ = 6
     kp_lin = 0.5
     
     max_frwd_vel = kp_lin
@@ -36,8 +36,6 @@ class cls_navigate_robot():
     
     def __init__(self):
         rospy.init_node('navigate_robot', anonymous=False)
-        
-        self.err_dis2obj = None # for testing
         
         # Homogeneous transform for base_laser wrt base_link
         p_base = np.array([[0.337], [0], [0.307]])
@@ -64,7 +62,6 @@ class cls_navigate_robot():
         
     def callback_sensObj(self, msg):
         self.msg_sensObj = msg
-        # print(self.err_dis2obj)
         
         
     def callback_husky_pose(self, msg):
@@ -112,7 +109,6 @@ class cls_navigate_robot():
             lin_vel_x = 0
             ang_vel_z = 0
             self.phase = 'move2circ_position'
-            self.update_target()
             
         elif abs(err_angle) > cls_navigate_robot.zone_frwd_angle:
             lin_vel_x = 0
@@ -199,6 +195,8 @@ class cls_navigate_robot():
             ang_vel_z = 0
             if self.phase == 'cir_orientation_set':
                 self.trg_dist = err_dist
+                self.update_target()
+                self.bigger_than_eps = False
         
         return ang_vel_z
         
@@ -208,29 +206,37 @@ class cls_navigate_robot():
         q_base_x, q_base_y = self.find_q_base(err_dist, err_angle)
         dist2obj = np.sqrt(q_base_x**2 + q_base_y**2)
         
-        self.err_dis2obj = self.trg_dist - err_dist
-        print(self.trg_dist)
+        err_dis2obj = self.trg_dist - err_dist
         
         # return to tracking obstacle
         if err_dist > cls_navigate_robot.e_buffr:
             self.phase = 'track_obj'
         
         elif self.dist_from_target() > cls_navigate_robot.eps_dist:
-            ang_vel_z = self.err_dis2obj*cls_navigate_robot.kp_ang_circ + self.cir_orientation_set()
+            
+            # means we just got far enough from the target to start tracking task
+            if not self.bigger_than_eps: 
+                self.bigger_than_eps = True
+                
+            ang_vel_z = err_dis2obj*cls_navigate_robot.kp_ang_circ + self.cir_orientation_set()
             lin_vel_x = cls_navigate_robot.circ_lin_vel
             
-        # else:
-        #     ang_vel_z = 0
-        #     lin_vel_x = 0
-        #     print("arrived/n/n")
-        
         else:
-            # print(dist2obj)
-            # print(err_dis2obj)
-            # print(dist2obj)
-            ang_vel_z = self.err_dis2obj*cls_navigate_robot.kp_ang_circ + self.cir_orientation_set()
-            lin_vel_x = cls_navigate_robot.circ_lin_vel
             
+            if self.bigger_than_eps: # checks if we are starting circ
+                ang_vel_z = 0
+                lin_vel_x = 0
+                print("arrived/n/n")
+                
+            else:
+                ang_vel_z = err_dis2obj*cls_navigate_robot.kp_ang_circ + self.cir_orientation_set()
+                lin_vel_x = cls_navigate_robot.circ_lin_vel
+        
+        # else:
+        #     ang_vel_z = err_dis2obj*cls_navigate_robot.kp_ang_circ + self.cir_orientation_set()
+        #     lin_vel_x = cls_navigate_robot.circ_lin_vel
+            
+        print(self.dist_from_target())
         self.publish_cmd_vel(lin_vel_x, ang_vel_z)
             
         
@@ -258,7 +264,7 @@ class cls_navigate_robot():
         
         elif self.phase == 'circumvent_phase':
             self.circumvent()
-            # print('circumvent_phase') # TODO: Remove once done testin
+            print('circumvent_phase') # TODO: Remove once done testin
             
         self.rate.sleep()
         
