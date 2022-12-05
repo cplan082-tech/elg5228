@@ -12,7 +12,7 @@ class cls_navigate_robot():
     e_buffr = e + 5e-1
     
     eps_ang = 5
-    eps_circ_ang = 3
+    eps_circ_ang = 2
     eps_dist = 1e-1
     
     zone_frwd_angle = 15 # error angle in deg where angular vel = min_vel
@@ -20,8 +20,10 @@ class cls_navigate_robot():
     
     # proportional gain (K_p) for P type controller
     kp_ang = 2
-    kp_ang_circ = 6
     kp_lin = 0.5
+    
+    kp_ang_circ = 3
+    ki_ang_circ = 0.1
     
     max_frwd_vel = kp_lin
     min_frwd_vel = 0.05
@@ -51,9 +53,7 @@ class cls_navigate_robot():
         self.msg_sensObj = Pose2D()
         self.msg_pose_husky = Twist()
         
-        self.track_obj_phase = True
-        self.mv2circ_pos_phase = False
-        self.cir_orientation_set_phase = False
+        self.sum_err_dist = 0
         
         self.phase = 'track_obj'
         
@@ -218,7 +218,10 @@ class cls_navigate_robot():
             if not self.bigger_than_eps: 
                 self.bigger_than_eps = True
                 
-            ang_vel_z = err_dis2obj*cls_navigate_robot.kp_ang_circ + self.cir_orientation_set()
+            ang_vel_z = err_dis2obj*cls_navigate_robot.kp_ang_circ + \
+                self.sum_err_dist*cls_navigate_robot.ki_ang_circ + \
+                    self.cir_orientation_set()
+                    
             lin_vel_x = cls_navigate_robot.circ_lin_vel
             
         else:
@@ -227,14 +230,16 @@ class cls_navigate_robot():
                 ang_vel_z = 0
                 lin_vel_x = 0
                 print("arrived/n/n")
+                self.phase = 'reset'
                 
             else:
-                ang_vel_z = err_dis2obj*cls_navigate_robot.kp_ang_circ + self.cir_orientation_set()
+                ang_vel_z = err_dis2obj*cls_navigate_robot.kp_ang_circ + \
+                    self.sum_err_dist*cls_navigate_robot.ki_ang_circ + \
+                        self.cir_orientation_set()
+                        
                 lin_vel_x = cls_navigate_robot.circ_lin_vel
         
-        # else:
-        #     ang_vel_z = err_dis2obj*cls_navigate_robot.kp_ang_circ + self.cir_orientation_set()
-        #     lin_vel_x = cls_navigate_robot.circ_lin_vel
+        self.sum_err_dist += err_dis2obj
             
         print(self.dist_from_target())
         self.publish_cmd_vel(lin_vel_x, ang_vel_z)
@@ -265,6 +270,10 @@ class cls_navigate_robot():
         elif self.phase == 'circumvent_phase':
             self.circumvent()
             print('circumvent_phase') # TODO: Remove once done testin
+            
+        elif self.phase == 'reset':
+            self.sum_err_dist = 0
+            self.phase = 'track_obj'
             
         self.rate.sleep()
         
