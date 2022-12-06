@@ -16,11 +16,10 @@ class cls_navigate_robot():
     eps_dist = 1e-1
     
     zone_frwd_angle = 15 # error angle in deg where angular vel = min_vel
-    # slow_zone_dist = 1 # error angle in deg where angular vel = min_vel
     
     # proportional gain (K_p) for P type controller
     kp_ang = 2
-    kp_ang_circ = 6
+    kp_ang_circ = 7
     kp_lin = 0.5
     
     max_frwd_vel = kp_lin
@@ -30,9 +29,10 @@ class cls_navigate_robot():
     min_ang_vel = 0.1
     
     circ_lin_vel = 0.1
-    circ_ang_vel = 0.3
+    circ_ang_vel = 0.2
     
-    ang_err_offset = 90 - 8.5 # used to be 8
+    # Line-up base_link's y-axis to be perpenticular to the object's tangential plane
+    ang_err_offset = 90 - 8 # offset's offset is 8 which helps best in keeping on track
     
     def __init__(self):
         rospy.init_node('navigate_robot', anonymous=False)
@@ -41,7 +41,7 @@ class cls_navigate_robot():
         p_base = np.array([[0.337], [0], [0.307]])
         
         R_link_laser = x_elemental(180)
-        self.HT_link_laser = HT_builder(R_link_laser, p_base)
+        self.HT_base_laser = HT_builder(R_link_laser, p_base) # HT of laser wrt base link of robot's under-chassis
         
         # Publisher/Subscriber object instantiation
         self.sub_sensObj = rospy.Subscriber('/sense_object', Pose2D, self.callback_sensObj)
@@ -51,13 +51,7 @@ class cls_navigate_robot():
         self.msg_sensObj = Pose2D()
         self.msg_pose_husky = Twist()
         
-        self.track_obj_phase = True
-        self.mv2circ_pos_phase = False
-        self.cir_orientation_set_phase = False
-        
-        self.phase = 'track_obj'
-        
-        # self.rate = rospy.Rate(10) # publish frequency in Hz
+        self.phase = 'track_obj' # initialise phase sequencer to start at 'track_obj' phase
         
         
     def callback_sensObj(self, msg):
@@ -77,7 +71,7 @@ class cls_navigate_robot():
         
         
     def find_ang_vel(self, err_angle):       
-        direction = np.sign(err_angle)*-1
+        direction = np.sign(err_angle)*-1 # used for converting from laser RF to base_link RF (accounted for latter on)
         ang_vel = self.vel_check(abs(cls_navigate_robot.kp_ang*err_angle/180), 
                                  cls_navigate_robot.min_ang_vel,
                                  cls_navigate_robot.max_ang_vel)
@@ -102,6 +96,7 @@ class cls_navigate_robot():
     
     def track_obj(self):
         
+        # workaround for annoying bug (first trans is always 0,0)
         bad_trans = True
         while bad_trans:
             err_dist, err_angle = self.get_obj_err()
@@ -114,27 +109,32 @@ class cls_navigate_robot():
             ang_vel_z = 0
             self.phase = 'move2circ_position'
             
+        # Prevents robot from moving frwd when orient. wrt obj is too great
         elif abs(err_angle) > cls_navigate_robot.zone_frwd_angle:
             lin_vel_x = 0
             ang_vel_z = self.find_ang_vel(err_angle)
         
+        # Moves frwd only when orient. wrt obj is small enough
         elif abs(err_angle) < cls_navigate_robot.eps_ang:
             lin_vel_x = self.find_lin_vel(err_dist)
             ang_vel_z = 0
             
+        # Engages both lin. mot. and ang. mot. otherwise
         else:
             lin_vel_x = self.find_lin_vel(err_dist)
             ang_vel_z = self.find_ang_vel(err_angle)
             
         self.publish_cmd_vel(lin_vel_x, ang_vel_z)
         
-        
+    
+    # updates target location for circ. comp. 
     def update_target(self):
         msg_pose_husky = self.msg_pose_husky
         self.husky_trg_position = msg_pose_husky.pose.pose.position
         self.husky_trg_orientation = msg_pose_husky.pose.pose.orientation
         
     
+    # dist. between robot & trg dest.
     def dist_from_target(self):
         msg_pose_husky = self.msg_pose_husky
         husky_pres_position = msg_pose_husky.pose.pose.position
@@ -147,22 +147,28 @@ class cls_navigate_robot():
         return dist
     
     
+    # finds position "q" wrt base_link
     def find_q_base(self, err_dist, err_angle):
+        
+        # RF obj wrt laser
         x = np.cos(np.deg2rad(err_angle))*err_dist
         y = np.sin(np.deg2rad(err_angle))*err_dist
         q_laser = np.array([[x], [y], [0]])
         R_laser_obj = z_elemental(err_angle)
         HT_laser_obj = HT_builder(R_laser_obj, q_laser)
         
-        HT_base_obj = np.dot(self.HT_link_laser, HT_laser_obj)
+        # RF obj wrt base_link 
+        HT_base_obj = np.dot(self.HT_base_laser, HT_laser_obj)
         R_base_obj, q_base = T_extrct_Rp(HT_base_obj)
         
+        # x and y coords. of obj wrt base_link RF
         q_base_x = q_base[0][0]
         q_base_y = q_base[1][0]
         
         return q_base_x, q_base_y
     
     
+    # get's robot into pos. for circumvention
     def move2circ_position(self):
         err_dist, err_angle = self.get_obj_err()
         
@@ -170,37 +176,50 @@ class cls_navigate_robot():
         if err_dist > cls_navigate_robot.e_buffr:
             self.phase = 'track_obj'
         
-        # 0.143 m is dist between lsr and front bumper
-        # 0.337074 m is dist between lsr and outside left wheel
-        elif err_dist < cls_navigate_robot.eps_dist + 0.337074: 
+        # Fine tunes entry angle
+        elif abs(err_angle) > cls_navigate_robot.eps_circ_ang:
             lin_vel_x = 0
+            ang_vel_z = self.find_ang_vel(err_angle)
+        
+        # close enough to obj. to start setting circ. orient.
+        elif err_dist < cls_navigate_robot.eps_dist + 0.337074: # 0.337074 m is dist between lsr and outside left wheel
+            lin_vel_x = 0
+            ang_vel_z = 0
             self.phase = 'cir_orientation_set'
-            
+         
+        # approaches obj to help ensure proper dist. when circumventing
         else:
             lin_vel_x = cls_navigate_robot.min_frwd_vel
+            ang_vel_z = 0
         
-        self.publish_cmd_vel(lin_vel_x, 0)
+        self.publish_cmd_vel(lin_vel_x, ang_vel_z)
         
-        
+    
+    # rotates robot 90 deg
     def cir_orientation_set(self):
         err_dist, err_angle = self.get_obj_err()
         q_base_x, q_base_y = self.find_q_base(err_dist, err_angle)
         
+        # original angle err w/ addition of 90 deg offset
         err_ang_circ = np.rad2deg(np.arctan2(q_base_y, q_base_x)) + cls_navigate_robot.ang_err_offset
         
         # ensures cir_phase was not accidently engaged
         if err_dist > cls_navigate_robot.e_buffr:
             self.phase = 'track_obj' 
         
+        # angle large enough to rot.
         elif abs(err_ang_circ) > cls_navigate_robot.eps_circ_ang:
             ang_vel_z = -1*self.find_ang_vel(err_ang_circ)
             
+        # orient. good. ready to start circ.
         else:
             ang_vel_z = 0
+            
+            # needed because another method use this one but should not alter the below vars.
             if self.phase == 'cir_orientation_set':
-                self.trg_dist = err_dist
+                self.trg_dist = err_dist # dist to obj the robot must maintain
                 self.update_target()
-                self.bigger_than_eps = False
+                self.bigger_than_eps = False # Prevents "circumvent" phase from trrigering dest. reached msg
         
         return ang_vel_z
         
@@ -230,7 +249,7 @@ class cls_navigate_robot():
             if self.bigger_than_eps: # checks if we are starting circ
                 ang_vel_z = 0
                 lin_vel_x = 0
-                print("arrived/n/n")
+                print("\n\n************** arrived **************\n\n")
                 
             else:
                 ang_vel_z = err_dis2obj*cls_navigate_robot.kp_ang_circ + self.cir_orientation_set()
