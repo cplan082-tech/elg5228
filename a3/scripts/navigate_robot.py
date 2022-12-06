@@ -28,7 +28,7 @@ class cls_navigate_robot():
     max_ang_vel = 3
     min_ang_vel = 0.1
     
-    circ_lin_vel = 0.1
+    circ_lin_vel = 0.2
     circ_ang_vel = 0.2
     
     # Line-up base_link's y-axis to be perpenticular to the object's tangential plane
@@ -234,7 +234,7 @@ class cls_navigate_robot():
         if err_dist > cls_navigate_robot.e_buffr:
             self.phase = 'track_obj'
         
-        elif self.dist_from_target() > cls_navigate_robot.eps_dist + 0.3: # 0.3 m dist from lsr to outside wheel
+        elif self.dist_from_target() > cls_navigate_robot.eps_dist + 0.337074: # 0.3 m dist from lsr to outside wheel
             
             # means we just got far enough from the target to start tracking task
             if not self.bigger_than_eps: 
