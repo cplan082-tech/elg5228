@@ -1,0 +1,6 @@
+<launch>
+	<node name="turtle_a2" pkg="turtlesim" type="turtlesim_node" />
+	<node name="robo_drv_a2" pkg="a2" type="robot_driver.py" />
+	<node name="pos_rep" pkg="a2" type="pose_reporter.py" output="screen" launch-prefix="xterm -e" />
+	<node name="trg_pub" pkg="a2" type="target_publisher.py" launch-prefix="xterm -e" respawn="true" />
+</launch>
