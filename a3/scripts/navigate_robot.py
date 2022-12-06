@@ -32,7 +32,7 @@ class cls_navigate_robot():
     circ_lin_vel = 0.1
     circ_ang_vel = 0.3
     
-    ang_err_offset = 90 - 8
+    ang_err_offset = 90 - 8.5 # used to be 8
     
     def __init__(self):
         rospy.init_node('navigate_robot', anonymous=False)
@@ -57,7 +57,7 @@ class cls_navigate_robot():
         
         self.phase = 'track_obj'
         
-        self.rate = rospy.Rate(10) # publish frequency in Hz
+        # self.rate = rospy.Rate(10) # publish frequency in Hz
         
         
     def callback_sensObj(self, msg):
@@ -187,8 +187,6 @@ class cls_navigate_robot():
         q_base_x, q_base_y = self.find_q_base(err_dist, err_angle)
         
         err_ang_circ = np.rad2deg(np.arctan2(q_base_y, q_base_x)) + cls_navigate_robot.ang_err_offset
-        print("hit")
-        print("error_ang_circ = {}".format(err_ang_circ))
         
         # ensures cir_phase was not accidently engaged
         if err_dist > cls_navigate_robot.e_buffr:
@@ -237,12 +235,8 @@ class cls_navigate_robot():
             else:
                 ang_vel_z = err_dis2obj*cls_navigate_robot.kp_ang_circ + self.cir_orientation_set()
                 lin_vel_x = cls_navigate_robot.circ_lin_vel
-        
-        # else:
-        #     ang_vel_z = err_dis2obj*cls_navigate_robot.kp_ang_circ + self.cir_orientation_set()
-        #     lin_vel_x = cls_navigate_robot.circ_lin_vel
             
-        print(self.dist_from_target())
+        # print(self.dist_from_target())
         self.publish_cmd_vel(lin_vel_x, ang_vel_z)
             
         
@@ -270,9 +264,9 @@ class cls_navigate_robot():
         
         elif self.phase == 'circumvent_phase':
             self.circumvent()
-            print('circumvent_phase') # TODO: Remove once done testin
+            print('circumvent_phase; distance from trg = {}'.format(self.dist_from_target())) # TODO: Remove once done testin
             
-        self.rate.sleep()
+        # self.rate.sleep()
         
         
     def get_obj_err(self):
