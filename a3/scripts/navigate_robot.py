@@ -9,18 +9,17 @@ from geometry_msgs.msg import Pose2D, Twist
 
 class cls_navigate_robot():
     e = 0.7
-    eps_dist = 1e-1
-    
-    e_buffr = e + 1
+    e_buffr = e + 0.7
     
     eps_ang = 5
     eps_circ_ang = 1
+    eps_dist = 1e-1
     
     zone_frwd_angle = 15 # error angle in deg where angular vel = min_vel
     
     # proportional gain (K_p) for P type controller
     kp_ang = 2
-    kp_ang_circ = 7
+    kp_ang_circ = 4
     kp_lin = 0.5
     
     max_frwd_vel = kp_lin
@@ -34,7 +33,6 @@ class cls_navigate_robot():
     
     # Line-up base_link's y-axis to be perpenticular to the object's tangential plane
     ang_err_offset = 90 - 8 # offset's offset is 8 which helps best in keeping on track
-    offset_len_laser2wheel = 0.337074 # 0.337074 m is dist between lsr and outside left wheel
     
     def __init__(self):
         rospy.init_node('navigate_robot', anonymous=False)
@@ -148,24 +146,6 @@ class cls_navigate_robot():
         
         return dist
     
-    def dest_detect(self, err_angle):
-        dist = self.dist_from_target()
-        
-        x_laser = dist*np.cos(err_angle)
-        y_laser = dist*np.sin(err_angle)*-1
-        
-        print(x_laser)
-        print(y_laser)
-        
-        dest_arv_flag = False
-        if dist < cls_navigate_robot.eps_dist: # TODO: working here
-            dest_arv_flag = True
-            
-        elif self.bigger_than_eps:
-            if (x_laser < cls_navigate_robot.eps_dist) and (y_laser < cls_navigate_robot.offset_len_laser2wheel):
-                dest_arv_flag = True
-        
-        return dest_arv_flag # boolean
     
     # finds position "q" wrt base_link
     def find_q_base(self, err_dist, err_angle):
@@ -202,7 +182,7 @@ class cls_navigate_robot():
             ang_vel_z = self.find_ang_vel(err_angle)
         
         # close enough to obj. to start setting circ. orient.
-        elif err_dist < cls_navigate_robot.eps_dist + cls_navigate_robot.offset_len_laser2wheel: 
+        elif err_dist < cls_navigate_robot.eps_dist + 0.337074: # 0.337074 m is dist between lsr and outside left wheel
             lin_vel_x = 0
             ang_vel_z = 0
             self.phase = 'cir_orientation_set'
@@ -231,7 +211,6 @@ class cls_navigate_robot():
         elif abs(err_ang_circ) > cls_navigate_robot.eps_circ_ang:
             ang_vel_z = -1*self.find_ang_vel(err_ang_circ)
             
-        # orient. good. ready to start circ.
         else:
             ang_vel_z = 0
             
@@ -255,7 +234,7 @@ class cls_navigate_robot():
         if err_dist > cls_navigate_robot.e_buffr:
             self.phase = 'track_obj'
         
-        elif not self.dest_detect(err_angle):
+        elif self.dist_from_target() > cls_navigate_robot.eps_dist + 0.3: # 0.3 m dist from lsr to outside wheel
             
             # means we just got far enough from the target to start tracking task
             if not self.bigger_than_eps: 
@@ -269,12 +248,12 @@ class cls_navigate_robot():
             if self.bigger_than_eps: # checks if we are starting circ
                 ang_vel_z = 0
                 lin_vel_x = 0
-                print("\n\n************** arrived **************\n\n")
                 
             else:
                 ang_vel_z = err_dis2obj*cls_navigate_robot.kp_ang_circ + self.cir_orientation_set()
                 lin_vel_x = cls_navigate_robot.circ_lin_vel
             
+        # print(self.dist_from_target())
         self.publish_cmd_vel(lin_vel_x, ang_vel_z)
             
         
@@ -284,11 +263,9 @@ class cls_navigate_robot():
         
         if self.phase == 'track_obj':
             self.track_obj()
-            print('track_obj_phase') # TODO: Remove once done testin
             
         elif self.phase == 'move2circ_position':
             self.move2circ_position()
-            print('mv2circ_pos_phase') # TODO: Remove once done testin
             
         elif self.phase == 'cir_orientation_set':
             ang_vel_z = self.cir_orientation_set()
@@ -298,11 +275,9 @@ class cls_navigate_robot():
                 self.phase = 'circumvent_phase'
                 
             self.publish_cmd_vel(0, ang_vel_z)
-            print('cir_orientation_set_phase') # TODO: Remove once done testin
         
         elif self.phase == 'circumvent_phase':
             self.circumvent()
-            print('circumvent_phase; distance from trg = {}'.format(self.dist_from_target())) # TODO: Remove once done testin
             
         # self.rate.sleep()
         
