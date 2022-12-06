@@ -9,11 +9,12 @@ from geometry_msgs.msg import Pose2D, Twist
 
 class cls_navigate_robot():
     e = 0.7
+    eps_dist = 1e-1
+    
     e_buffr = e + 1
     
     eps_ang = 5
     eps_circ_ang = 1
-    eps_dist = 1e-1
     
     zone_frwd_angle = 15 # error angle in deg where angular vel = min_vel
     
@@ -33,6 +34,7 @@ class cls_navigate_robot():
     
     # Line-up base_link's y-axis to be perpenticular to the object's tangential plane
     ang_err_offset = 90 - 8 # offset's offset is 8 which helps best in keeping on track
+    offset_len_laser2wheel = 0.337074 # 0.337074 m is dist between lsr and outside left wheel
     
     def __init__(self):
         rospy.init_node('navigate_robot', anonymous=False)
@@ -146,6 +148,24 @@ class cls_navigate_robot():
         
         return dist
     
+    def dest_detect(self, err_angle):
+        dist = self.dist_from_target()
+        
+        x_laser = dist*np.cos(err_angle)
+        y_laser = dist*np.sin(err_angle)*-1
+        
+        print(x_laser)
+        print(y_laser)
+        
+        dest_arv_flag = False
+        if dist < cls_navigate_robot.eps_dist: # TODO: working here
+            dest_arv_flag = True
+            
+        elif self.bigger_than_eps:
+            if (x_laser < cls_navigate_robot.eps_dist) and (y_laser < cls_navigate_robot.offset_len_laser2wheel):
+                dest_arv_flag = True
+        
+        return dest_arv_flag # boolean
     
     # finds position "q" wrt base_link
     def find_q_base(self, err_dist, err_angle):
@@ -182,7 +202,7 @@ class cls_navigate_robot():
             ang_vel_z = self.find_ang_vel(err_angle)
         
         # close enough to obj. to start setting circ. orient.
-        elif err_dist < cls_navigate_robot.eps_dist + 0.337074: # 0.337074 m is dist between lsr and outside left wheel
+        elif err_dist < cls_navigate_robot.eps_dist + cls_navigate_robot.offset_len_laser2wheel: 
             lin_vel_x = 0
             ang_vel_z = 0
             self.phase = 'cir_orientation_set'
@@ -235,7 +255,7 @@ class cls_navigate_robot():
         if err_dist > cls_navigate_robot.e_buffr:
             self.phase = 'track_obj'
         
-        elif self.dist_from_target() > cls_navigate_robot.eps_dist:
+        elif not self.dest_detect(err_angle):
             
             # means we just got far enough from the target to start tracking task
             if not self.bigger_than_eps: 
@@ -255,7 +275,6 @@ class cls_navigate_robot():
                 ang_vel_z = err_dis2obj*cls_navigate_robot.kp_ang_circ + self.cir_orientation_set()
                 lin_vel_x = cls_navigate_robot.circ_lin_vel
             
-        # print(self.dist_from_target())
         self.publish_cmd_vel(lin_vel_x, ang_vel_z)
             
         
