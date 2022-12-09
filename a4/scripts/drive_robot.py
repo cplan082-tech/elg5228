@@ -5,7 +5,7 @@ import rospy
 from geometry_msgs.msg import Pose, Twist
 
 class drive_robot():
-    x_L = -0.032
+    x_L = 0.032
     y_L = 0
     theta = 0
     

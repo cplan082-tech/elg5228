@@ -51,7 +51,7 @@ class cls_sense_object():
         
         # Find direction of obj
         idx = np.reshape(np.argwhere(arr_rng == self.msg_direction_heading.position.x), -1) # convert 2dim arr to 1 dim arr
-        self.msg_direction_heading.orientation.z = np.rad2deg(idx*msg_lidar.angle_increment + msg_lidar.angle_min) 
+        self.msg_direction_heading.orientation.z = np.rad2deg(idx*msg_lidar.angle_increment + msg_lidar.angle_min)
         
         
     def calc_err(self):
