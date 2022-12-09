@@ -1,7 +1,7 @@
 <launch>
 	<include file="$(find turtlebot3_gazebo)/launch/turtlebot3_empty_world.launch" />
 	
-	<node name="sensed_object" pkg="a4" type="sensed_object.py" />
-	<node name="drive_robot" pkg="a4" type="drive_robot.py" launch-prefix="xterm -e" />
+	<node name="sensed_object" pkg="a4" type="sensed_object.py" launch-prefix="xterm -e" respawn="true" />
+	<node name="drive_robot" pkg="a4" type="drive_robot.py" launch-prefix="xterm -e" respawn="true" />
 
 </launch>

@@ -36,7 +36,7 @@ class drive_robot():
         
         
     def calc_vel(self):
-        msg = self.msg_sensObj
+        msg = self.msg_sensObj        
         
         arr_v_a_L = np.array([[msg.orientation.x],
                               [msg.orientation.y]])
@@ -55,6 +55,12 @@ class drive_robot():
         else:
             vel_lin_ang = np.array([0, 0]).reshape(-1,1)
             
+        return vel_lin_ang
+
+
+    def sequencer(self):
+        vel_lin_ang = self.calc_vel()
+        
         self.publish_cmd_vel(vel_lin_ang[0][0], vel_lin_ang[1][0])
         self.rate.sleep()
         
@@ -64,6 +70,6 @@ if __name__ == "__main__":
     obj = drive_robot()
     while not rospy.is_shutdown():
         try:
-            obj.calc_vel()
+            obj.sequencer()
         except:
             pass

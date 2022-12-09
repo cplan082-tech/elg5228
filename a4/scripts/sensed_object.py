@@ -9,7 +9,7 @@ class cls_sense_object():
     
     el = 1 # saftey dist. between LiDAR and boundary (in m)
     e_max = 0.3 # in m
-    k_p = 0.1
+    k_p = 0.12
     
     
     def __init__(self):
