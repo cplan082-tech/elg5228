@@ -1,0 +1,29 @@
+- Navigate to "course_dir"
+	- cmd: cd ~/catkin_ws/src/course_dir/
+
+- Create pkg a3
+	- cmd: catkin_create_pkg a4 rospy sensor_msgs geometry_msgs nav_msgs tf
+
+- Make "scripts" folder in pkg "a4"
+	- cmd:
+		- mkdir ./a4/scripts
+
+- Make "launch" folder in pkg "a4"
+	- cmd:
+		- mkdir ./a4/launc
+
+- Place ros node files in "scripts" folder
+	- i.e. 'sensed_object.py', 'drive_robot.py', 'data_reporter.py'
+
+
+- Place ros launch file in "launch" folder
+	- i.e. 'a4_launch.launch'
+
+-build pkg
+	- cmd:
+		- catkin build a4
+
+
+- Source pkg
+	- cmd:
+		- source ~/catkin_ws/devel/setup.bash
