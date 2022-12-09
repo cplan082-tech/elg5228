@@ -46,10 +46,7 @@ class cls_sense_object():
         
         
         # gets "d" and "alpha"
-        def get_direction_heading(self, arr_rng, msg_lidar):
-            
-            msg_rng = msg_lidar.ranges
-            
+        def get_direction_heading(self, arr_rng, msg_lidar):            
             # find heading of object
             self.msg_direction_heading.position.y = float('NaN')            
             self.msg_direction_heading.position.x = np.nanmin(arr_rng)
@@ -66,7 +63,7 @@ class cls_sense_object():
             err_nrm = err/cls_sense_object.e_max
             
             # True if max err WAS exceeded
-            if abs(err_nrm) > cls_sense_object.e_max:
+            if abs(err) > cls_sense_object.e_max:
                 err_nrm = np.sing(err_nrm) # return -1 or 1
                 
             self.msg_direction_heading.position.y = err
