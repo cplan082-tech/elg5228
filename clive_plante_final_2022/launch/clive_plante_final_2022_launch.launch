@@ -29,7 +29,12 @@
 		
 		<param name="robot_description" command="$(find xacro)/xacro $(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro" />
 	
-		<node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf" args="-urdf -model turtlebot3_$(arg model) -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" />
+		<node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf" args="-urdf -model turtlebot3_$(arg model) -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" >
+		</node>
+		
+		<node name="drive_negative_v_w" pkg="clive_plante_final_2022" type="drive_negative_v_w.py" >
+			<remap from="turtle1/cmd_vel" to="cmd_vel" />
+		</node>		
 	</group>
 	
 	
