@@ -1,13 +1,39 @@
 <launch>
 	<arg name="simulate_with_turtlesim" default="1"/>
 	
+	<arg name="world_name" default="worlds/empty.world"/>
+	<arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+	<arg name="x_pos" default="0.0"/>
+	<arg name="y_pos" default="0.0"/>
+	<arg name="z_pos" default="0.0"/>
 	
-	<node name="turtlesim_node_leader" pkg="turtlesim" type="turtlesim_node" if="$(arg simulate_with_turtlesim)" />
-	<node name="turtlesim_node_follower" pkg="turtlesim" type="turtlesim_node" if="$(arg simulate_with_turtlesim)" />
-	<node name="drive_positive_v_w" pkg="clive_plante_final_2022" type="drive_positive_v_w.py" if="$(arg simulate_with_turtlesim)"/>
 	
-	<!-- to be deleted when done testing part A of Q4 -->
-	<node name="turtleTEST" pkg="turtlesim" type="turtlesim_node" unless="$(arg simulate_with_turtlesim)" />
+	<!-- Simulation Group-->
+	<group if="$(arg simulate_with_turtlesim)">
+		<node name="turtlesim_node_leader" pkg="turtlesim" type="turtlesim_node" />
+		<node name="turtlesim_node_follower" pkg="turtlesim" type="turtlesim_node" />
+		<node name="drive_positive_v_w" pkg="clive_plante_final_2022" type="drive_positive_v_w.py" />
+	</group>
+	
+	
+	<!-- Bare Bones Group -->
+	<group unless="$(arg simulate_with_turtlesim)">
+		<include file="$(find gazebo_ros)/launch/empty_world.launch">
+			<arg name="world_name" value="$(arg world_name)"/>
+			<arg name="paused" value="false"/>
+			<arg name="use_sim_time" value="true"/>
+			<arg name="gui" value="true"/>
+			<arg name="headless" value="false"/>
+			<arg name="debug" value="false"/>
+		</include>
+		
+		<param name="robot_description" command="$(find xacro)/xacro $(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro" />
+	
+		<node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf" args="-urdf -model turtlebot3_$(arg model) -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" />
+	</group>
+	
+	
+	
 	
 	
 		
