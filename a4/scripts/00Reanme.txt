@@ -10,7 +10,7 @@
 
 - Make "launch" folder in pkg "a4"
 	- cmd:
-		- mkdir ./a4/launc
+		- mkdir ./a4/launch
 
 - Place ros node files in "scripts" folder
 	- i.e. 'sensed_object.py', 'drive_robot.py', 'data_reporter.py'
@@ -27,3 +27,17 @@
 - Source pkg
 	- cmd:
 		- source ~/catkin_ws/devel/setup.bash
+
+
+- launch dat shit
+	- cmd (x=default ,y=default, world_name=default)
+		- roslaunch a4 a4_launch.launch
+
+	- cmd (x=1 ,y=1, world_name=default)
+		- roslaunch a4 a4_launch.launch x_pos:=1 y_pos:=1
+
+	- cmd (x=1, y=1, world_name=worlds/robocup_3Dsim.world)
+		- roslaunch a4 a4_launch.launch x_pos:=1 y_pos:=1 world_name:=worlds/robocup_3Dsim.world
+
+	- cmd TEMPLATE!!! (cannot just cpy paste cmd, must update values):
+		- roslaunch a4 a4_launch.launch x_pos:=[x coord here] y_pos:=[y coord here] world_name:=[world name here]

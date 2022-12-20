@@ -59,4 +59,4 @@ if __name__ == "__main__":
             obj.pub_direction_heading()
         except:
             pass
-    # 
+    
