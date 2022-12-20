@@ -1,0 +1,13 @@
+<launch>
+	<arg name="simulate_with_turtlesim" default="1"/>
+	
+	<node name="turtleA" pkg="turtlesim" type="turtlesim_node" if="$(arg simulate_with_turtlesim)" />
+	<node name="turtleB" pkg="turtlesim" type="turtlesim_node" if="$(arg simulate_with_turtlesim)" />
+	
+	<!-- to be deleted when done testing part A of Q4 -->
+	<node name="turtleTEST" pkg="turtlesim" type="turtlesim_node" unless="$(arg simulate_with_turtlesim)" />
+	
+	
+	
+	<node name="rqt_graph" pkg="rqt_graph" type="rqt_graph" />
+</launch>
