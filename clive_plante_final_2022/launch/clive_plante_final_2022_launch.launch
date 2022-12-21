@@ -13,6 +13,7 @@
 		<node name="turtlesim_node_leader" pkg="turtlesim" type="turtlesim_node" />
 		<node name="turtlesim_node_follower" pkg="turtlesim" type="turtlesim_node" />
 		<node name="drive_positive_v_w" pkg="clive_plante_final_2022" type="drive_positive_v_w.py" />
+		<node name="velocity_reporter" pkg="clive_plante_final_2022" type="velocity_reporter.py" launch-prefix="xterm -e" />
 	</group>
 	
 	
@@ -34,7 +35,12 @@
 		
 		<node name="drive_negative_v_w" pkg="clive_plante_final_2022" type="drive_negative_v_w.py" >
 			<remap from="turtle1/cmd_vel" to="cmd_vel" />
-		</node>		
+		</node>
+		
+		<node name="velocity_reporter" pkg="clive_plante_final_2022" type="velocity_reporter.py" launch-prefix="xterm -e" >
+			<remap from="turtle1/cmd_vel" to="cmd_vel" />
+		</node>
+		
 	</group>
 	
 	
